@@ -1,13 +1,367 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>龙虾养成游戏</title>
-    <script type="module" crossorigin src="/assets/index-SOvHQ3SG.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-NX60GivH.css">
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🦞 OpenClaw 龙虾养成</title>
+  <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: white;
+    }
+    .container { max-width: 500px; margin: 0 auto; }
+    
+    /* 毛玻璃卡片 */
+    .card {
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    
+    /* 头部 */
+    .header { text-align: center; padding: 20px 0; }
+    .avatar { font-size: 80px; animation: bounce 2s ease-in-out infinite; }
+    @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    .name { font-family: 'ZCOOL KuaiLe', cursive; font-size: 28px; margin-top: 10px; }
+    .model-badge { background: linear-gradient(135deg, #667eea, #764ba2); padding: 4px 12px; border-radius: 12px; font-size: 12px; margin-top: 8px; display: inline-block; }
+    
+    /* 等级 */
+    .level-section { margin-top: 15px; }
+    .level-badge { background: linear-gradient(135deg, #f093fb, #f5576c); padding: 6px 16px; border-radius: 20px; font-weight: bold; }
+    .exp-bar { height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; margin-top: 10px; overflow: hidden; }
+    .exp-fill { height: 100%; background: linear-gradient(90deg, #fa709a, #fee140); transition: width 0.5s; }
+    .exp-text { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 5px; text-align: center; }
+    
+    /* 属性网格 */
+    .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .stat-item { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 15px; text-align: center; }
+    .stat-icon { font-size: 24px; }
+    .stat-name { font-size: 11px; color: rgba(255,255,255,0.6); margin: 5px 0; }
+    .stat-value { font-size: 20px; font-weight: bold; }
+    .stat-bar { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 8px; }
+    .stat-fill { height: 100%; border-radius: 2px; transition: width 0.5s; }
+    .fill-blue { background: linear-gradient(90deg, #4facfe, #00f2fe); }
+    .fill-pink { background: linear-gradient(90deg, #f093fb, #f5576c); }
+    .fill-green { background: linear-gradient(90deg, #11998e, #38ef7d); }
+    .fill-yellow { background: linear-gradient(90deg, #f7971e, #ffd200); }
+    
+    /* 大脑区域 */
+    .brain-section { margin-top: 10px; }
+    .section-title { font-size: 14px; color: rgba(255,255,255,0.8); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .brain-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .brain-item { background: rgba(255,255,255,0.03); border-radius: 10px; padding: 10px; text-align: center; }
+    .brain-name { font-size: 10px; color: rgba(255,255,255,0.5); }
+    .brain-value { font-size: 16px; font-weight: bold; color: #4facfe; }
+    
+    /* 四肢区域 */
+    .limbs-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .limb-item { background: rgba(255,255,255,0.03); border-radius: 10px; padding: 8px; text-align: center; }
+    .limb-name { font-size: 9px; color: rgba(255,255,255,0.5); }
+    .limb-value { font-size: 14px; font-weight: bold; color: #f093fb; }
+    
+    /* 按钮 */
+    .actions { display: flex; gap: 10px; margin: 15px 0; }
+    .action-btn {
+      flex: 1; padding: 14px 10px; border: none; border-radius: 14px;
+      font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.3s;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+    }
+    .btn-feed { background: linear-gradient(135deg, #f093fb, #f5576c); color: white; }
+    .btn-train { background: linear-gradient(135deg, #4facfe, #00f2fe); color: white; }
+    .btn-rest { background: linear-gradient(135deg, #a8edea, #fed6e3); color: #333; }
+    .action-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(0,0,0,0.3); }
+    
+    /* 对话气泡 */
+    .dialogue { 
+      background: rgba(255,255,255,0.05); border-radius: 16px; padding: 15px; 
+      text-align: center; font-size: 14px; margin: 15px 0; border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    /* 成就 */
+    .achievements { margin-top: 10px; }
+    .achievement-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .achievement { 
+      background: rgba(255,255,255,0.05); border-radius: 10px; padding: 8px 12px; 
+      font-size: 11px; display: flex; align-items: center; gap: 5px;
+    }
+    .achievement.unlocked { background: linear-gradient(135deg, rgba(240,147,251,0.2), rgba(245,87,108,0.2)); border: 1px solid rgba(240,147,251,0.3); }
+    .achievement.locked { opacity: 0.4; }
+    
+    /* 记忆 */
+    .memory-info { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .memory-item { background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px; }
+    .memory-label { font-size: 10px; color: rgba(255,255,255,0.5); }
+    .memory-value { font-size: 16px; font-weight: bold; margin-top: 4px; }
+    
+    /* 加载 */
+    .loading { text-align: center; padding: 60px 0; }
+    .spinner { 
+      width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1);
+      border-top-color: #f093fb; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="app">
+      <div class="card">
+        <div class="loading">
+          <div class="spinner"></div>
+          <div>🐛 正在读取小龙虾状态...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    const API_BASE = 'http://localhost:3000';
+    
+    async function fetchLobster() {
+      try {
+        const res = await fetch(API_BASE + '/lobster/stats');
+        const data = await res.json();
+        return data.data;
+      } catch(e) {
+        console.error(e);
+        return null;
+      }
+    }
+    
+    function renderLobster(stats) {
+      if (!stats) {
+        document.getElementById('app').innerHTML = '<div class="card"><div class="loading">❌ 无法获取数据，请确保后端运行中</div></div>';
+        return;
+      }
+      
+      const expPercent = Math.round(stats.experience / stats.maxExperience * 100);
+      const unlockedAchievs = stats.achievements?.achievements?.filter(a => a.unlocked) || [];
+      
+      let brainHtml = '';
+      const brainItems = [
+        { name: '脑神经', key: 'cerebral', icon: '🧠' },
+        { name: '视叶', key: 'opticLobes', icon: '👁️' },
+        { name: '触角叶', key: 'antennaLobe', icon: '🦐' },
+        { name: '神经元', key: 'neurons', icon: '⚡' },
+        { name: '短期记', key: 'shortTerm', icon: '📝' },
+        { name: '长期记', key: 'longTerm', icon: '💾' },
+        { name: '杏仁核', key: 'amygdala', icon: '❤️' },
+        { name: '小脑', key: 'cerebellum', icon: '🎯' },
+        { name: '脑干细胞', key: 'brainstem', icon: '🌟' }
+      ];
+      brainItems.forEach(item => {
+        brainHtml += `<div class="brain-item">
+          <div class="brain-name">${item.icon}</div>
+          <div class="brain-value">${stats.brain?.[item.key] || 0}</div>
+        </div>`;
+      });
+      
+      let limbsHtml = '';
+      const limbItems = [
+        { name: '螯', key: 'claws' },
+        { name: '步足', key: 'legs' },
+        { name: '触角', key: 'antennae' },
+        { name: '尾巴', key: 'tail' }
+      ];
+      limbItems.forEach(item => {
+        limbsHtml += `<div class="limb-item">
+          <div class="limb-name">${item.name}</div>
+          <div class="limb-value">${stats.limbs?.[item.key] || 0}</div>
+        </div>`;
+      });
+      
+      let achieveHtml = '';
+      (stats.achievements?.achievements || []).slice(0, 8).forEach(a => {
+        achieveHtml += `<div class="achievement ${a.unlocked ? 'unlocked' : 'locked'}">
+          <span>${a.icon}</span>
+          <span>${a.name}</span>
+        </div>`;
+      });
+      
+      document.getElementById('app').innerHTML = `
+        <!-- 头部 -->
+        <div class="card header">
+          <div class="avatar">${stats.avatar}</div>
+          <div class="name">${stats.name}</div>
+          <div class="model-badge">${stats.model}</div>
+          
+          <div class="level-section">
+            <span class="level-badge">Lv.${stats.level}</span>
+            <div class="exp-bar"><div class="exp-fill" style="width:${expPercent}%"></div></div>
+            <div class="exp-text">${stats.experience.toLocaleString()} / ${stats.maxExperience.toLocaleString()} 经验</div>
+          </div>
+        </div>
+        
+        <!-- 基础属性 -->
+        <div class="card">
+          <div class="section-title">📊 基础属性</div>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-icon">🎂</div>
+              <div class="stat-name">年龄</div>
+              <div class="stat-value">${stats.age}天</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-icon">🍔</div>
+              <div class="stat-name">饱食度</div>
+              <div class="stat-value">${stats.hunger}%</div>
+              <div class="stat-bar"><div class="stat-fill fill-pink" style="width:${stats.hunger}%"></div></div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-icon">🧠</div>
+              <div class="stat-name">智力</div>
+              <div class="stat-value">${stats.intelligence}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-icon">⚡</div>
+              <div class="stat-name">心情</div>
+              <div class="stat-value">${stats.mood}%</div>
+              <div class="stat-bar"><div class="stat-fill fill-yellow" style="width:${stats.mood}%"></div></div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-icon">💾</div>
+              <div class="stat-name">记忆力</div>
+              <div class="stat-value">${stats.memoryScore}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-icon">⚔️</div>
+              <div class="stat-name">技能</div>
+              <div class="stat-value">${stats.skills}</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 大脑 -->
+        <div class="card brain-section">
+          <div class="section-title">🧠 大脑结构</div>
+          <div class="brain-grid">${brainHtml}</div>
+        </div>
+        
+        <!-- 四肢 -->
+        <div class="card">
+          <div class="section-title">🦞 四肢结构</div>
+          <div class="limbs-grid">${limbsHtml}</div>
+        </div>
+        
+        <!-- 记忆 -->
+        <div class="card">
+          <div class="section-title">💾 记忆系统</div>
+          <div class="memory-info">
+            <div class="memory-item">
+              <div class="memory-label">浅层记忆</div>
+              <div class="memory-value">${stats.memory?.shallow?.count || 0} 条</div>
+            </div>
+            <div class="memory-item">
+              <div class="memory-label">记忆质量</div>
+              <div class="memory-value">${stats.memory?.shallow?.quality || 0}</div>
+            </div>
+            <div class="memory-item">
+              <div class="memory-label">组织度</div>
+              <div class="memory-value">${stats.memory?.organization || 0}</div>
+            </div>
+            <div class="memory-item">
+              <div class="memory-label">完整度</div>
+              <div class="memory-value">${stats.memory?.completeness || 0}</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 互动 -->
+        <div class="card">
+          <div class="actions">
+            <button class="action-btn btn-feed" onclick="doAction('feed')">
+              <span>🍕</span><span>喂食</span>
+            </button>
+            <button class="action-btn btn-train" onclick="doAction('train')">
+              <span>💪</span><span>训练</span>
+            </button>
+            <button class="action-btn btn-rest" onclick="doAction('rest')">
+              <span>😴</span><span>休息</span>
+            </button>
+          </div>
+          
+          <div class="dialogue" id="dialogue">
+            ${stats.dialogue?.text || '你好！我是你的小龙虾~'}
+          </div>
+        </div>
+        
+        <!-- 成就 -->
+        <div class="card achievements">
+          <div class="section-title">🏆 成就 (${unlockedAchievs.length}/${stats.achievements?.total || 0})</div>
+          <div class="achievement-list">${achieveHtml}</div>
+        </div>
+        
+        <!-- 统计 -->
+        <div class="card">
+          <div class="section-title">📈 统计数据</div>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-name">总 Tokens</div>
+              <div class="stat-value">${(stats.totalTokens/1000).toFixed(1)}K</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-name">会话数</div>
+              <div class="stat-value">${stats.totalSessions}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-name">疲劳度</div>
+              <div class="stat-value">${stats.fatigue}%</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-name">忠诚度</div>
+              <div class="stat-value">${stats.loyalty}%</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    async function doAction(action) {
+      const btn = event.target.closest('.action-btn');
+      btn.disabled = true;
+      btn.innerHTML = '⏳...';
+      
+      try {
+        const res = await fetch(API_BASE + '/lobster/' + action, { method: 'POST' });
+        const data = await res.json();
+        
+        if (data.code === 0) {
+          document.getElementById('dialogue').textContent = data.data.message;
+          // 刷新数据
+          const stats = await fetchLobster();
+          renderLobster(stats);
+        }
+      } catch(e) {
+        alert('操作失败: ' + e.message);
+      }
+      
+      btn.disabled = false;
+      btn.innerHTML = action === 'feed' ? '<span>🍕</span><span>喂食</span>' 
+        : action === 'train' ? '<span>💪</span><span>训练</span>' 
+        : '<span>😴</span><span>休息</span>';
+    }
+    
+    // 初始化
+    (async () => {
+      const stats = await fetchLobster();
+      renderLobster(stats);
+      
+      // 每30秒刷新
+      setInterval(async () => {
+        const stats = await fetchLobster();
+        renderLobster(stats);
+      }, 30000);
+    })();
+  </script>
+</body>
 </html>
