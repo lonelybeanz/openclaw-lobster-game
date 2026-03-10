@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/api.ts","./src/main.tsx","./src/types.ts","./src/vite-env.d.ts","./src/components/experiencebar.tsx","./src/components/skillcard.tsx","./src/components/usercard.tsx","./src/pages/lobsterpage.tsx","./src/pages/userpage.tsx","./src/types/water.ts"],"version":"5.9.3"}
