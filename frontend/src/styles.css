@@ -375,6 +375,103 @@ body {
   font-size: clamp(14px, 1.6vw, 17px);
 }
 
+.lobster-news-panel {
+  margin-top: 16px;
+}
+
+.lobster-news-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.lobster-news-header h3 {
+  font-size: 20px;
+}
+
+.lobster-news-header span {
+  color: #bfdbfe;
+  font-size: 13px;
+}
+
+.lobster-news-empty {
+  color: #dbeafe;
+  font-size: 14px;
+}
+
+.lobster-news-list {
+  display: grid;
+  gap: 10px;
+}
+
+.lobster-news-card {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.35);
+  overflow: hidden;
+}
+
+.lobster-news-card.expanded {
+  border-color: rgba(103, 232, 249, 0.55);
+}
+
+.lobster-news-trigger {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.lobster-news-trigger h4 {
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+.lobster-news-trigger p {
+  color: #dbeafe;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.lobster-news-trigger span {
+  color: #67e8f9;
+  font-size: 12px;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+.lobster-news-detail {
+  padding: 0 14px 14px;
+}
+
+.lobster-news-detail > p {
+  color: #e2e8f0;
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.lobster-news-meta {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 12px;
+  color: #bfdbfe;
+}
+
+.lobster-news-meta a {
+  color: #7dd3fc;
+}
+
 .fade-in-up {
   animation: fadeUp 0.62s ease both;
 }

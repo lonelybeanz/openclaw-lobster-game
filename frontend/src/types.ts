@@ -84,3 +84,13 @@ export type LobsterStats = {
   totalMessages: number;
   lastActive: string;
 };
+
+export type LobsterNewsItem = {
+  id: string;
+  title: string;
+  summary: string;
+  content: string;
+  source: string;
+  url: string | null;
+  publishedAt: string;
+};

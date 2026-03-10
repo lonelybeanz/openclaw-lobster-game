@@ -1,32 +1,68 @@
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { spawn } from 'child_process';
+import { getModelBrainMapping, getModelDescription } from './modelMapper';
 
 const OPENCLAW_DIR = '/Users/moltbot/.openclaw';
+
+export interface Brain {
+  cerebral: number;
+  opticLobes: number;
+  antennaLobe: number;
+  neurons: number;
+  shortTerm: number;
+  longTerm: number;
+  episodic: number;
+  procedural: number;
+  amygdala: number;
+  cerebellum: number;
+  brainstem: number;
+}
+
+export interface Limbs {
+  claws: number;
+  legs: number;
+  antennae: number;
+  tail: number;
+  strength: number;
+  agility: number;
+  endurance: number;
+}
 
 export interface LobsterStats {
   name: string;
   avatar: string;
   personality: string;
+  model: string;
+  
   level: number;
   experience: number;
   maxExperience: number;
   age: number;
+  
   hunger: number;
+  health: number;
+  
+  brain: Brain;
+  brainMapping: any;
+  
+  limbs: Limbs;
+  
   intelligence: number;
   memory: number;
   skills: number;
   experiencePool: number;
+  
   mood: number;
   fatigue: number;
   loyalty: number;
+  
   totalTokens: number;
   totalSessions: number;
   totalMessages: number;
   lastActive: string;
 }
 
-// 执行 CLI 命令
 function execCommand(cmd: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn('bash', ['-c', cmd], { 
@@ -41,7 +77,6 @@ function execCommand(cmd: string): Promise<string> {
   });
 }
 
-// 从 OpenClaw CLI 获取 token 统计
 async function getTokenStats(): Promise<{ totalTokens: number; totalSessions: number }> {
   try {
     const output = await execCommand('openclaw sessions --all-agents --json 2>/dev/null');
@@ -49,30 +84,22 @@ async function getTokenStats(): Promise<{ totalTokens: number; totalSessions: nu
     const totalTokens = data.sessions?.reduce((sum: number, s: any) => sum + (s.totalTokens || 0), 0) || 0;
     const totalSessions = data.count || 0;
     return { totalTokens, totalSessions };
-  } catch (e) {
-    console.log('Failed to get token stats:', e);
-    return { totalTokens: 0, totalSessions: 0 };
-  }
+  } catch { return { totalTokens: 0, totalSessions: 0 }; }
 }
 
-// 读取 OpenClaw 配置
 async function getOpenClawConfig(): Promise<{ name: string; avatar: string; personality: string }> {
   try {
     const configPath = join(OPENCLAW_DIR, 'openclaw.json');
     const content = await readFile(configPath, 'utf-8');
     const config = JSON.parse(content);
-    
     return {
       name: config.meta?.name || 'ZenClaw',
       avatar: config.meta?.avatar || '🦞',
       personality: config.meta?.personality || '聪明、可靠、幽默',
     };
-  } catch {
-    return { name: 'ZenClaw', avatar: '🦞', personality: '聪明、可靠、幽默' };
-  }
+  } catch { return { name: 'ZenClaw', avatar: '🦞', personality: '聪明、可靠、幽默' }; }
 }
 
-// 获取年龄
 async function getAge(): Promise<number> {
   try {
     const configPath = join(OPENCLAW_DIR, 'openclaw.json');
@@ -86,28 +113,56 @@ async function getAge(): Promise<number> {
   return Math.floor((Date.now() - new Date('2026-03-04').getTime()) / (1000 * 60 * 60 * 24));
 }
 
-// 获取技能数
 async function getSkillCount(): Promise<number> {
   try {
     const { readdir } = await import('fs/promises');
     const skillsDir = join(OPENCLAW_DIR, 'skills');
     const files = await readdir(skillsDir);
     return files.filter(f => !f.startsWith('.') && f !== 'README.md').length;
-  } catch {
-    return 0;
-  }
+  } catch { return 0; }
 }
 
-// 获取记忆质量
 async function getMemoryScore(): Promise<number> {
   try {
     const { readdir } = await import('fs/promises');
     const memoryDir = join(OPENCLAW_DIR, 'workspace', 'memory');
     const files = await readdir(memoryDir, { recursive: true });
     return files.length;
-  } catch {
-    return 0;
-  }
+  } catch { return 0; }
+}
+
+function calculateBrain(tokens: number, sessions: number, memoryFiles: number, modelMapping: any): Brain {
+  const base = Math.min(100, Math.floor(tokens / 10000));
+  
+  return {
+    cerebral: Math.min(100, Math.floor((base * 0.6) + (modelMapping.reasoning * 0.4))),
+    opticLobes: Math.min(100, Math.floor((base * 0.5) + (modelMapping.vision * 0.5))),
+    antennaLobe: Math.min(100, Math.floor((base * 0.5) + (modelMapping.perception * 0.5))),
+    neurons: Math.min(100, Math.floor((sessions * 3) + (modelMapping.creativity * 0.3))),
+    
+    shortTerm: Math.min(100, Math.floor((sessions * 5) + (modelMapping.shortMemory * 0.3))),
+    longTerm: Math.min(100, Math.floor((memoryFiles * 2) + (modelMapping.contextWindow * 0.3))),
+    episodic: Math.min(100, Math.floor(sessions * 2)),
+    procedural: Math.min(100, Math.floor(sessions * 1.5 + modelMapping.coding * 0.3)),
+    
+    amygdala: Math.min(100, Math.floor(50 + sessions * 2 + modelMapping.emotion * 0.3)),
+    cerebellum: Math.min(100, Math.floor(base * 0.5 + modelMapping.coding * 0.5)),
+    brainstem: 80 + Math.floor(Math.random() * 20),
+  };
+}
+
+function calculateLimbs(tokens: number, modelMapping: any): Limbs {
+  const base = Math.min(100, Math.floor(tokens / 15000));
+  
+  return {
+    claws: Math.min(100, Math.floor(base * 0.5 + modelMapping.creativity * 0.5)),
+    legs: Math.min(100, base + 15),
+    antennae: Math.min(100, Math.floor(modelMapping.contextWindow * 0.5 + base * 0.5)),
+    tail: Math.min(100, Math.floor(modelMapping.output * 0.5 + base * 0.5)),
+    strength: Math.min(100, base + 12),
+    agility: Math.min(100, base + 18),
+    endurance: Math.min(100, Math.floor(modelMapping.efficiency * 0.5 + base * 0.5)),
+  };
 }
 
 function calculateLevel(tokens: number): { level: number; experience: number; maxExperience: number } {
@@ -118,35 +173,68 @@ function calculateLevel(tokens: number): { level: number; experience: number; ma
 }
 
 export async function getLobsterStats(): Promise<LobsterStats> {
-  const [config, age, tokenStats, skillCount, memoryScore] = await Promise.all([
+  const [config, age, tokenStats, skillCount, memoryScore, modelMapping, modelDesc] = await Promise.all([
     getOpenClawConfig(),
     getAge(),
     getTokenStats(),
     getSkillCount(),
     getMemoryScore(),
+    getModelBrainMapping(),
+    getModelDescription(),
   ]);
   
   const { level, experience, maxExperience } = calculateLevel(tokenStats.totalTokens);
+  const memoryStats = await analyzeMemory();
+  const brain = calculateBrain(tokenStats.totalTokens, tokenStats.totalSessions, memoryScore, modelMapping);
+  const limbs = calculateLimbs(tokenStats.totalTokens, modelMapping);
   
   return {
     name: config.name,
     avatar: config.avatar,
     personality: config.personality,
+    model: modelDesc,
+    
     level,
     experience,
     maxExperience,
     age,
     hunger: Math.max(20, 100 - new Date().getHours() * 2),
-    intelligence: 8,
-    memory: memoryScore,
+    health: 90 + Math.floor(Math.random() * 10),
+    
+    brain,
+    brainMapping: modelMapping,
+    memory: {
+      shallow: {
+        count: memoryStats.shallowCount,
+        quality: memoryStats.shallowQuality,
+        recent: memoryStats.shallowRecent
+      },
+      deep: {
+        count: memoryStats.deepCount,
+        quality: memoryStats.deepQuality,
+        files: memoryStats.deepFiles
+      },
+      organization: memoryStats.organization,
+      completeness: memoryStats.completeness
+    },
+    
+    limbs,
+    
+    intelligence: Math.floor((brain.cerebral + brain.neurons) / 2),
+    memoryScore: Math.floor((brain.longTerm + brain.episodic) / 2),
     skills: skillCount,
     experiencePool: Math.floor(tokenStats.totalSessions / 5),
-    mood: 80,
-    fatigue: 10,
+    
+    mood: Math.min(100, brain.amygdala),
+    fatigue: Math.max(0, 100 - age * 2),
     loyalty: Math.min(100, Math.floor(age * 5)),
+    
     totalTokens: tokenStats.totalTokens,
     totalSessions: tokenStats.totalSessions,
     totalMessages: Math.floor(tokenStats.totalTokens / 100),
     lastActive: new Date().toISOString(),
   };
 }
+export async function getLobsterNews() { return []; }
+
+import { analyzeMemory } from './memoryAnalyzer';

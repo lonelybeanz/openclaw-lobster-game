@@ -2,6 +2,7 @@ import type {
   ApiResponse,
   ExperienceRecord,
   LobsterStats,
+  LobsterNewsItem,
   MemberLevel,
   MemberSkill,
   MemberUser,
@@ -83,4 +84,8 @@ export function getExperienceRecords(params: { pageNo: number; pageSize: number;
 
 export function getLobsterStats() {
   return request<LobsterStats>('/lobster/stats');
+}
+
+export function getLobsterNews() {
+  return request<LobsterNewsItem[]>('/lobster/news');
 }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getLobsterStats } from '../api';
-import type { LobsterStats } from '../types';
+import { getLobsterNews, getLobsterStats } from '../api';
+import type { LobsterNewsItem, LobsterStats } from '../types';
 
 type ActionType = 'feed' | 'train' | 'rest';
 
@@ -28,10 +28,14 @@ function formatNumber(value: number) {
 
 export default function LobsterPage() {
   const [stats, setStats] = useState<LobsterStats | null>(null);
+  const [news, setNews] = useState<LobsterNewsItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [newsLoading, setNewsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [newsError, setNewsError] = useState<string | null>(null);
   const [delta, setDelta] = useState<DeltaState>(initialDelta);
   const [lastAction, setLastAction] = useState<string>('等待互动');
+  const [expandedNewsId, setExpandedNewsId] = useState<string | null>(null);
 
   async function loadStats() {
     try {
@@ -48,8 +52,26 @@ export default function LobsterPage() {
     }
   }
 
+  async function loadNews() {
+    try {
+      setNewsLoading(true);
+      setNewsError(null);
+      const data = await getLobsterNews();
+      setNews(data);
+      setExpandedNewsId((prev) => (prev && data.some((item) => item.id === prev) ? prev : data[0]?.id ?? null));
+    } catch (e) {
+      setNewsError(e instanceof Error ? e.message : '加载失败');
+    } finally {
+      setNewsLoading(false);
+    }
+  }
+
+  async function refreshAll() {
+    await Promise.all([loadStats(), loadNews()]);
+  }
+
   useEffect(() => {
-    void loadStats();
+    void refreshAll();
   }, []);
 
   const view = useMemo(() => {
@@ -109,14 +131,15 @@ export default function LobsterPage() {
         <div className="header-right">
           <p>最近互动</p>
           <strong>{lastAction}</strong>
-          <button className="refresh-btn" type="button" onClick={() => void loadStats()} disabled={loading}>
-            {loading ? '同步中...' : '刷新状态'}
+          <button className="refresh-btn" type="button" onClick={() => void refreshAll()} disabled={loading || newsLoading}>
+            {loading || newsLoading ? '同步中...' : '刷新状态'}
           </button>
         </div>
       </header>
 
       {error ? <div className="panel error glass-card">数据加载失败：{error}</div> : null}
       {loading && !stats ? <div className="panel glass-card">正在加载龙虾状态...</div> : null}
+      {newsError ? <div className="panel error glass-card">资讯加载失败：{newsError}</div> : null}
 
       {view ? (
         <>
@@ -231,6 +254,52 @@ export default function LobsterPage() {
               <p>最近活跃</p>
               <h2 className="time-kpi">{new Date(view.lastActive).toLocaleString('zh-CN')}</h2>
             </article>
+          </section>
+
+          <section className="panel glass-card lobster-news-panel fade-in-up delay-3">
+            <div className="lobster-news-header">
+              <h3>OpenClaw 资讯专栏</h3>
+              <span>{newsLoading ? '同步资讯中...' : `共 ${news.length} 条`}</span>
+            </div>
+            {newsLoading ? <p className="lobster-news-empty">正在获取最新资讯...</p> : null}
+            {!newsLoading && news.length === 0 ? <p className="lobster-news-empty">暂无资讯</p> : null}
+
+            {!newsLoading && news.length > 0 ? (
+              <div className="lobster-news-list">
+                {news.map((item) => {
+                  const expanded = expandedNewsId === item.id;
+                  return (
+                    <article key={item.id} className={`lobster-news-card ${expanded ? 'expanded' : ''}`}>
+                      <button
+                        type="button"
+                        className="lobster-news-trigger"
+                        onClick={() => setExpandedNewsId((prev) => (prev === item.id ? null : item.id))}
+                      >
+                        <div>
+                          <h4>{item.title}</h4>
+                          <p>{item.summary}</p>
+                        </div>
+                        <span>{expanded ? '收起' : '展开'}</span>
+                      </button>
+                      {expanded ? (
+                        <div className="lobster-news-detail">
+                          <p>{item.content}</p>
+                          <div className="lobster-news-meta">
+                            <span>{new Date(item.publishedAt).toLocaleString('zh-CN')}</span>
+                            <span>来源：{item.source}</span>
+                            {item.url ? (
+                              <a href={item.url} target="_blank" rel="noreferrer">
+                                查看原文
+                              </a>
+                            ) : null}
+                          </div>
+                        </div>
+                      ) : null}
+                    </article>
+                  );
+                })}
+              </div>
+            ) : null}
           </section>
         </>
       ) : null}
