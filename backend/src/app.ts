@@ -3,15 +3,46 @@ import { cors } from 'hono/cors';
 import { getCompleteLobsterStats } from './services/complete';
 import { getOpenClawNews } from './services/news';
 import { getTokenStats, initTokenStats, updateTokenStats } from './services/tokenStats';
+import { interact, loadLobsterState, getAchievements } from './services/persistence';
+import { initModelBenchmarkUpdater } from './services/modelBenchmark';
 
 const app = new Hono();
 
 app.use('*', cors());
 
+// 初始化（降级启动，不阻塞服务）
+try {
+  await initTokenStats();
+} catch (e) {
+  console.error('[startup] initTokenStats failed:', e);
+}
+try {
+  await initModelBenchmarkUpdater();
+} catch (e) {
+  console.error('[startup] initModelBenchmarkUpdater failed:', e);
+}
+
 // 完整的龙虾数据
 app.get('/lobster/stats', async (c) => {
   const stats = await getCompleteLobsterStats();
-  return c.json({ code: 0, data: stats });
+  
+  // 合并持久化状态
+  const lobsterState = await loadLobsterState();
+  
+  return c.json({ 
+    code: 0, 
+    data: {
+      ...stats,
+      hunger: lobsterState.hunger,
+      mood: lobsterState.mood,
+      fatigue: lobsterState.fatigue,
+      loyalty: lobsterState.loyalty,
+      level: lobsterState.level,
+      experience: lobsterState.experience,
+      experiencePool: stats.experiencePool + lobsterState.experience,
+      totalInteractions: lobsterState.totalInteractions
+    } 
+  });
 });
 
 // 资讯
@@ -20,75 +51,45 @@ app.get('/lobster/news', async (c) => {
   return c.json({ code: 0, data: news });
 });
 
-// Tokens
+// Token 统计
 app.get('/lobster/tokens', async (c) => {
   const stats = await getTokenStats();
   return c.json({ code: 0, data: stats });
 });
 
-app.post('/lobster/tokens/init', async (c) => {
-  const stats = await initTokenStats();
-  return c.json({ code: 0, data: stats });
-});
-
-app.post('/lobster/tokens/update', async (c) => {
-  const result = await updateTokenStats();
-  return c.json({ code: 0, data: result });
-});
-
-// 喂食
-app.post('/lobster/feed', async (c) => {
+// 互动接口 - 喂食/训练/休息
+app.post('/lobster/interact', async (c) => {
+  const { action } = await c.req.json();
+  
+  if (!['feed', 'train', 'rest'].includes(action)) {
+    return c.json({ code: 1, message: '无效动作' }, 400);
+  }
+  
+  const result = await interact(action);
   return c.json({ 
     code: 0, 
-    data: { 
-      message: '🍕 小龙虾饱餐一顿，开心！',
-      hunger: 100,
-      mood: 90 
+    data: {
+      ...result.state,
+      message: result.message,
+      expGained: result.exp
     } 
   });
 });
 
-// 训练
-app.post('/lobster/train', async (c) => {
-  return c.json({ 
-    code: 0, 
-    data: { 
-      message: '💪 训练完成，属性提升！',
-      experience: 50,
-      fatigue: 10
-    } 
-  });
+// 获取成就
+app.get('/lobster/achievements', async (c) => {
+  const achievements = await getAchievements();
+  return c.json({ code: 0, data: achievements });
 });
 
-// 休息
-app.post('/lobster/rest', async (c) => {
-  return c.json({ 
-    code: 0, 
-    data: { 
-      message: '😴 休息中，体力恢复中...',
-      fatigue: -30,
-      mood: 85
-    } 
-  });
-});
-
-// 主页
-app.get('/', (c) => {
-  return c.json({ 
-    code: 0, 
-    data: { 
-      name: 'OpenClaw Lobster Game API', 
-      version: '1.0.0',
-      endpoints: [
-        'GET /lobster/stats - 完整数据',
-        'GET /lobster/news - 资讯',
-        'GET /lobster/tokens - Token统计',
-        'POST /lobster/feed - 喂食',
-        'POST /lobster/train - 训练',
-        'POST /lobster/rest - 休息'
-      ]
-    } 
-  });
+// Token 增量更新
+app.post('/lobster/tokens', async (c) => {
+  const { tokens } = await c.req.json();
+  if (tokens !== undefined && (!Number.isFinite(tokens) || tokens < 0)) {
+    return c.json({ code: 1, message: 'tokens 必须是非负数字' }, 400);
+  }
+  await updateTokenStats(tokens);
+  return c.json({ code: 0, message: '已更新' });
 });
 
 export default app;

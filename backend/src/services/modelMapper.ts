@@ -1,5 +1,6 @@
 import { readFile } from 'fs/promises';
 import { join } from 'path';
+import { getCurrentModelBenchmarks } from './modelBenchmark';
 
 const OPENCLAW_DIR = '/Users/moltbot/.openclaw';
 
@@ -13,7 +14,7 @@ interface ModelConfig {
 }
 
 // 从配置读取模型
-async function getCurrentModel(): Promise<ModelConfig | null> {
+export async function getCurrentModel(): Promise<ModelConfig | null> {
   try {
     const configPath = join(OPENCLAW_DIR, 'openclaw.json');
     const content = await readFile(configPath, 'utf-8');
@@ -66,11 +67,51 @@ export interface ModelBrainMapping {
   
   // 效率
   efficiency: number;      // 耐力
+
+  // 外部评测
+  benchmark: {
+    intelligence: number;
+    reasoningScore: number;
+    contextScore: number;
+    speedScore: number;
+    latencyScore: number;
+    costScore: number;
+  };
+}
+
+function clampScore(value: number): number {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function mapBenchmarkScores(benchmark: Awaited<ReturnType<typeof getCurrentModelBenchmarks>>): ModelBrainMapping['benchmark'] {
+  if (!benchmark) {
+    return {
+      intelligence: 50,
+      reasoningScore: 50,
+      contextScore: 50,
+      speedScore: 50,
+      latencyScore: 50,
+      costScore: 50,
+    };
+  }
+
+  return {
+    intelligence: clampScore(benchmark.intelligence_index ?? 50),
+    reasoningScore: benchmark.reasoning_model === null ? 50 : benchmark.reasoning_model ? 85 : 55,
+    contextScore: clampScore(((benchmark.context_window ?? 200_000) / 200_000) * 100),
+    speedScore: clampScore(((benchmark.output_speed ?? 40) / 120) * 100),
+    latencyScore: clampScore(100 - ((benchmark.latency ?? 800) / 2_000) * 100),
+    costScore: clampScore(100 - ((benchmark.price ?? 10) / 30) * 100),
+  };
 }
 
 // 将模型配置映射到大脑属性
 export async function getModelBrainMapping(): Promise<ModelBrainMapping> {
-  const model = await getCurrentModel();
+  const [model, benchmark] = await Promise.all([
+    getCurrentModel(),
+    getCurrentModelBenchmarks(),
+  ]);
+  const benchmarkScores = mapBenchmarkScores(benchmark);
   
   if (!model) {
     return {
@@ -85,6 +126,7 @@ export async function getModelBrainMapping(): Promise<ModelBrainMapping> {
       emotion: 50,
       output: 50,
       efficiency: 50,
+      benchmark: benchmarkScores,
     };
   }
   
@@ -117,6 +159,7 @@ export async function getModelBrainMapping(): Promise<ModelBrainMapping> {
     
     // 效率
     efficiency: costEff,
+    benchmark: benchmarkScores,
   };
 }
 

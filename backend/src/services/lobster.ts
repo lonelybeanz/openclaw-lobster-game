@@ -1,4 +1,4 @@
-import { readFile } from 'fs/promises';
+import { readFile, stat, readdir } from 'fs/promises';
 import { join } from 'path';
 import { spawn } from 'child_process';
 import { getModelBrainMapping, getModelDescription } from './modelMapper';
@@ -101,16 +101,39 @@ async function getOpenClawConfig(): Promise<{ name: string; avatar: string; pers
 }
 
 async function getAge(): Promise<number> {
+  const DAY_MS = 1000 * 60 * 60 * 24;
   try {
+    // 查找最早的记忆文件时间
+    const memoryDir = join(OPENCLAW_DIR, 'workspace/memory');
+    let earliestMemoryMs = NaN;
+    try {
+      const files = await readdir(memoryDir);
+      for (const file of files) {
+        if (file.endsWith('.md') && !file.startsWith('.')) {
+          const filePath = join(memoryDir, file);
+          const fileStat = await stat(filePath);
+          if (!Number.isFinite(earliestMemoryMs) || fileStat.birthtime.getTime() < earliestMemoryMs) {
+            earliestMemoryMs = fileStat.birthtime.getTime();
+          }
+        }
+      }
+    } catch {}
+    
+    // 也检查配置文件
     const configPath = join(OPENCLAW_DIR, 'openclaw.json');
-    const content = await readFile(configPath, 'utf-8');
-    const config = JSON.parse(content);
-    const createdAt = config.wizard?.lastRunAt || config.meta?.lastTouchedAt;
-    if (createdAt) {
-      return Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24));
+    let configCreatedMs = NaN;
+    try {
+      const configStat = await stat(configPath);
+      configCreatedMs = configStat.birthtime.getTime();
+    } catch {}
+    
+    const candidates = [earliestMemoryMs, configCreatedMs].filter((t) => Number.isFinite(t));
+    if (candidates.length > 0) {
+      const earliestMs = Math.min(...candidates);
+      return Math.max(0, Math.floor((Date.now() - earliestMs) / DAY_MS));
     }
   } catch {}
-  return Math.floor((Date.now() - new Date('2026-03-04').getTime()) / (1000 * 60 * 60 * 24));
+  return 0;
 }
 
 async function getSkillCount(): Promise<number> {

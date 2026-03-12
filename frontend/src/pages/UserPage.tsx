@@ -67,9 +67,9 @@ export default function UserPage({
               {skills.map((skill) => {
                 const unlocked = unlockedSet.has(skill.id);
                 const eligible =
-                  (user.levelValue ?? 0) >= skill.required_level &&
-                  user.experience >= skill.required_experience &&
-                  skill.active === 1;
+                  (user.levelValue ?? 0) >= (skill.required_level ?? 0) &&
+                  user.experience >= (skill.required_experience ?? 0) &&
+                  !!skill.active;
 
                 return (
                   <SkillCard
@@ -77,9 +77,9 @@ export default function UserPage({
                     id={skill.id}
                     name={skill.name}
                     description={skill.description}
-                    requiredLevel={skill.required_level}
-                    requiredExperience={skill.required_experience}
-                    active={skill.active === 1}
+                    requiredLevel={skill.required_level ?? 0}
+                    requiredExperience={skill.required_experience ?? 0}
+                    active={Boolean(skill.active)}
                     unlocked={unlocked}
                     eligible={eligible}
                     onLearn={onLearnSkill}

@@ -28,52 +28,40 @@ export type MemberUser = {
 
 export type MemberSkill = {
   id: number;
-  code: string;
   name: string;
-  description: string | null;
-  required_level: number;
-  required_experience: number;
-  active: number;
-};
-
-export type UserSkill = MemberSkill & {
-  unlock_source: string;
-  unlocked_at: string;
-};
-
-export type ExperienceRecord = {
-  id: number;
-  user_id: number;
-  biz_type: number;
-  biz_id: string;
-  title: string;
   description: string;
-  experience: number;
-  total_experience: number;
-  created_at: string;
+  icon: string | null;
+  category: string;
+  required_level?: number;
+  required_experience?: number;
+  active?: boolean | number;
 };
 
-export type PageData<T> = {
-  total: number;
-  list: T[];
-  pageNo: number;
-  pageSize: number;
-};
-
-export type BizType = {
-  type: number;
-  title: string;
-  add: boolean;
+export type LobsterMemory = {
+  shallow?: {
+    count?: number;
+    quality?: number;
+    recent?: string[];
+  };
+  deep?: {
+    count?: number;
+  };
+  organization?: number;
+  completeness?: number;
 };
 
 export type LobsterStats = {
+  name: string;
+  avatar: string;
+  personality: string;
+  model: string;
   level: number;
   experience: number;
   maxExperience: number;
   age: number;
   hunger: number;
   intelligence: number;
-  memory: number;
+  memoryScore: number;
   skills: number;
   experiencePool: number;
   mood: number;
@@ -83,14 +71,25 @@ export type LobsterStats = {
   totalSessions: number;
   totalMessages: number;
   lastActive: string;
+  totalInteractions?: number;
+  brain?: any;
+  limbs?: any;
+  memory?: LobsterMemory;
 };
 
 export type LobsterNewsItem = {
   id: string;
   title: string;
   summary: string;
-  content: string;
   source: string;
-  url: string | null;
-  publishedAt: string;
+  url?: string;
+  publishedAt?: string;
+  date?: string;
+  content?: string;
+};
+
+export type Achievement = {
+  id: string;
+  name: string;
+  unlocked: boolean;
 };

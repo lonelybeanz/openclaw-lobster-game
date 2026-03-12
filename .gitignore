@@ -2,3 +2,9 @@ node_modules/
 dist/
 .DS_Store
 *.log
+frontend/dist/
+backend/data/token-stats.json
+backend/data/model-benchmarks.json
+*.tsbuildinfo
+*.bak
+*.backup

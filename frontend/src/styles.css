@@ -581,3 +581,60 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* 大脑结构网格 */
+.brain-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.brain-item {
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px;
+  padding: 12px 8px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.brain-item span {
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+}
+
+.brain-item strong {
+  font-size: 20px;
+  font-weight: bold;
+  color: #4facfe;
+}
+
+/* Tab 样式 */
+.lobster-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.lobster-tab {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.6);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.lobster-tab.active {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+}
+
+.lobster-tab:hover:not(.active) {
+  background: rgba(255,255,255,0.1);
+}
