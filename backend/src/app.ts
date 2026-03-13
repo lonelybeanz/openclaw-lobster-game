@@ -5,6 +5,7 @@ import { getOpenClawNews } from './services/news';
 import { getTokenStats, initTokenStats, updateTokenStats } from './services/tokenStats';
 import { interact, loadLobsterState, getAchievements } from './services/persistence';
 import { initModelBenchmarkUpdater } from './services/modelBenchmark';
+import { getPromptStats } from './services/promptStats';
 
 const app = new Hono();
 
@@ -54,6 +55,12 @@ app.get('/lobster/news', async (c) => {
 // Token 统计
 app.get('/lobster/tokens', async (c) => {
   const stats = await getTokenStats();
+  return c.json({ code: 0, data: stats });
+});
+
+// Prompt 查询统计
+app.get('/lobster/prompt', async (c) => {
+  const stats = await getPromptStats();
   return c.json({ code: 0, data: stats });
 });
 
