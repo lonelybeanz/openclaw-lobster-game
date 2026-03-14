@@ -216,22 +216,29 @@ export default function LobsterPage() {
   const memoryQuality = toNumber(view?.memory?.shallow?.quality);
   const levelScore = toNumber(view?.level);
   const moodScore = toNumber(view?.mood);
+  const benchmark = view?.brainMapping?.benchmark;
+  const benchmarkIntelligence = benchmark?.intelligence ?? 50;
+  const benchmarkReasoning = benchmark?.reasoningScore ?? 50;
+  const benchmarkContext = benchmark?.contextScore ?? 50;
+  const benchmarkSpeed = benchmark?.speedScore ?? 50;
+  const benchmarkLatency = benchmark?.latencyScore ?? 50;
+  const benchmarkCost = benchmark?.costScore ?? 50;
 
-  const reasoningScore = cerebral * 0.4 + opticLobes * 0.2 + antennaLobe * 0.2 + neurons * 0.2;
-  const intelligenceScore = cerebral * 0.3 + neurons * 0.2 + reasoningScore * 0.5;
-  const perceptionScore = opticLobes * 0.35 + antennaLobe * 0.35 + antennae * 0.15 + brainstem * 0.15;
-  const memoryScore = shortTerm * 0.2 + longTerm * 0.3 + episodic * 0.2 + procedural * 0.2 + memoryQuality * 0.1;
-  const reactionScore = cerebellum * 0.3 + brainstem * 0.25 + agility * 0.25 + amygdala * 0.2;
-  const growthScore = expRatio * 0.35 + levelScore * 4 * 0.25 + endurance * 0.2 + neurons * 0.1 + moodScore * 0.1;
+  const reasoningScore = cerebral * 0.28 + opticLobes * 0.14 + antennaLobe * 0.14 + neurons * 0.14 + benchmarkReasoning * 0.3;
+  const intelligenceScore = cerebral * 0.22 + neurons * 0.18 + reasoningScore * 0.25 + benchmarkIntelligence * 0.35;
+  const perceptionScore = opticLobes * 0.25 + antennaLobe * 0.25 + antennae * 0.15 + brainstem * 0.1 + benchmarkContext * 0.25;
+  const memoryScore = shortTerm * 0.18 + longTerm * 0.25 + episodic * 0.15 + procedural * 0.17 + memoryQuality * 0.1 + benchmarkContext * 0.15;
+  const reactionScore = cerebellum * 0.2 + brainstem * 0.15 + agility * 0.15 + amygdala * 0.1 + benchmarkSpeed * 0.25 + benchmarkLatency * 0.15;
+  const growthScore = expRatio * 0.2 + levelScore * 4 * 0.2 + endurance * 0.15 + neurons * 0.05 + moodScore * 0.05 + benchmarkCost * 0.35;
   const evolutionScore =
     intelligenceScore * 0.25 + perceptionScore * 0.2 + memoryScore * 0.2 + reactionScore * 0.2 + growthScore * 0.15;
 
   const majorMetrics = [
-    { key: 'intelligence', label: '智力', value: intelligenceScore, formula: '智力 = cerebral×0.3 + neurons×0.2 + (推理得分/100)×0.5' },
-    { key: 'perception', label: '感知', value: perceptionScore, formula: '感知 = opticLobes×0.4 + antennaLobe×0.3 + (视觉得分/100)×0.3' },
-    { key: 'memory', label: '记忆力', value: memoryScore, formula: '记忆力 = shortTerm×0.3 + longTerm×0.3 + (上下文长度/10000)×0.4' },
-    { key: 'reaction', label: '反应', value: reactionScore, formula: '反应 = (输出速度/200)×100' },
-    { key: 'growth', label: '成长值', value: growthScore, formula: '效率 = 100 - (价格×5)' },
+    { key: 'intelligence', label: '智力', value: intelligenceScore, formula: '智力 = 脑神经/神经元/推理得分 + Benchmark intelligence_index' },
+    { key: 'perception', label: '感知', value: perceptionScore, formula: '感知 = 视叶/触角叶/触角 + Benchmark context score' },
+    { key: 'memory', label: '记忆力', value: memoryScore, formula: '记忆力 = 短期/长期/情景/程序记忆 + Benchmark context score' },
+    { key: 'reaction', label: '反应', value: reactionScore, formula: '反应 = 小脑/脑干/敏捷 + Benchmark speed/latency score' },
+    { key: 'growth', label: '成长值', value: growthScore, formula: '成长值 = 经验/等级/耐力 + Benchmark cost score' },
   ] as const;
 
   return (
@@ -442,6 +449,36 @@ export default function LobsterPage() {
                   <h2>{metric.value.toFixed(1)}</h2>
                 </article>
               ))}
+            </div>
+            <h4 style={{ margin: '0 0 12px 0' }}>Benchmark 评测整合</h4>
+            <div
+              className="kpi-grid lobster-kpi-grid"
+              style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '12px' }}
+            >
+              <article className="kpi-card gradient-card-soft">
+                <p>Intelligence</p>
+                <h2>{benchmarkIntelligence.toFixed(1)}</h2>
+              </article>
+              <article className="kpi-card gradient-card-soft">
+                <p>Reasoning</p>
+                <h2>{benchmarkReasoning.toFixed(1)}</h2>
+              </article>
+              <article className="kpi-card gradient-card-soft">
+                <p>Context</p>
+                <h2>{benchmarkContext.toFixed(1)}</h2>
+              </article>
+              <article className="kpi-card gradient-card-soft">
+                <p>Speed</p>
+                <h2>{benchmarkSpeed.toFixed(1)}</h2>
+              </article>
+              <article className="kpi-card gradient-card-soft">
+                <p>Latency</p>
+                <h2>{benchmarkLatency.toFixed(1)}</h2>
+              </article>
+              <article className="kpi-card gradient-card-soft">
+                <p>Cost</p>
+                <h2>{benchmarkCost.toFixed(1)}</h2>
+              </article>
             </div>
             <h4 style={{ margin: '0 0 12px 0' }}>大脑属性</h4>
             <div
