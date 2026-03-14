@@ -1,6 +1,6 @@
 import { getLobsterStats, Brain, Limbs } from './lobster';
 import { analyzeMemory } from './memoryAnalyzer';
-import { getModelBrainMapping } from './modelMapper';
+import { type ModelBrainMapping } from './modelMapper';
 import { analyzeSkills, SkillsStats } from './skillsAnalyzer';
 import { getAchievements, AchievementsStats } from './achievements';
 import { generateDialogue, getRandomEvent, Dialogue } from './dialogue';
@@ -24,7 +24,7 @@ export interface CompleteLobsterStats {
   
   // 大脑
   brain: Brain;
-  brainMapping: any;
+  brainMapping: ModelBrainMapping;
   
   // 记忆
   memory: {

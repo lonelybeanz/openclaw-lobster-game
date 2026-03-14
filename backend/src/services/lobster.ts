@@ -1,7 +1,7 @@
 import { readFile, stat, readdir } from 'fs/promises';
 import { join } from 'path';
 import { spawn } from 'child_process';
-import { getModelBrainMapping, getModelDescription } from './modelMapper';
+import { getModelBrainMapping, getModelDescription, type ModelBrainMapping } from './modelMapper';
 
 const OPENCLAW_DIR = '/Users/moltbot/.openclaw';
 
@@ -44,12 +44,12 @@ export interface LobsterStats {
   health: number;
   
   brain: Brain;
-  brainMapping: any;
+  brainMapping: ModelBrainMapping;
   
   limbs: Limbs;
   
   intelligence: number;
-  memory: number;
+  memoryScore: number;
   skills: number;
   experiencePool: number;
   
@@ -61,6 +61,12 @@ export interface LobsterStats {
   totalSessions: number;
   totalMessages: number;
   lastActive: string;
+  memory: {
+    shallow: { count: number; quality: number; recent: string[] };
+    deep: { count: number; quality: number; files: string[] };
+    organization: number;
+    completeness: number;
+  };
 }
 
 function execCommand(cmd: string): Promise<string> {
@@ -154,37 +160,39 @@ async function getMemoryScore(): Promise<number> {
   } catch { return 0; }
 }
 
-function calculateBrain(tokens: number, sessions: number, memoryFiles: number, modelMapping: any): Brain {
+function calculateBrain(tokens: number, sessions: number, memoryFiles: number, modelMapping: ModelBrainMapping): Brain {
   const base = Math.min(100, Math.floor(tokens / 10000));
+  const benchmark = modelMapping.benchmark;
   
   return {
-    cerebral: Math.min(100, Math.floor((base * 0.6) + (modelMapping.reasoning * 0.4))),
+    cerebral: Math.min(100, Math.floor((base * 0.45) + (modelMapping.reasoning * 0.3) + (benchmark.intelligence * 0.25))),
     opticLobes: Math.min(100, Math.floor((base * 0.5) + (modelMapping.vision * 0.5))),
-    antennaLobe: Math.min(100, Math.floor((base * 0.5) + (modelMapping.perception * 0.5))),
+    antennaLobe: Math.min(100, Math.floor((base * 0.35) + (modelMapping.perception * 0.35) + (benchmark.contextScore * 0.3))),
     neurons: Math.min(100, Math.floor((sessions * 3) + (modelMapping.creativity * 0.3))),
     
     shortTerm: Math.min(100, Math.floor((sessions * 5) + (modelMapping.shortMemory * 0.3))),
-    longTerm: Math.min(100, Math.floor((memoryFiles * 2) + (modelMapping.contextWindow * 0.3))),
+    longTerm: Math.min(100, Math.floor((memoryFiles * 1.7) + (modelMapping.contextWindow * 0.2) + (benchmark.contextScore * 0.2))),
     episodic: Math.min(100, Math.floor(sessions * 2)),
     procedural: Math.min(100, Math.floor(sessions * 1.5 + modelMapping.coding * 0.3)),
     
     amygdala: Math.min(100, Math.floor(50 + sessions * 2 + modelMapping.emotion * 0.3)),
-    cerebellum: Math.min(100, Math.floor(base * 0.5 + modelMapping.coding * 0.5)),
-    brainstem: 80 + Math.floor(Math.random() * 20),
+    cerebellum: Math.min(100, Math.floor(base * 0.4 + modelMapping.coding * 0.35 + benchmark.speedScore * 0.25)),
+    brainstem: Math.min(100, Math.floor(55 + (benchmark.latencyScore * 0.35) + (benchmark.reasoningScore * 0.1))),
   };
 }
 
-function calculateLimbs(tokens: number, modelMapping: any): Limbs {
+function calculateLimbs(tokens: number, modelMapping: ModelBrainMapping): Limbs {
   const base = Math.min(100, Math.floor(tokens / 15000));
+  const benchmark = modelMapping.benchmark;
   
   return {
     claws: Math.min(100, Math.floor(base * 0.5 + modelMapping.creativity * 0.5)),
     legs: Math.min(100, base + 15),
     antennae: Math.min(100, Math.floor(modelMapping.contextWindow * 0.5 + base * 0.5)),
-    tail: Math.min(100, Math.floor(modelMapping.output * 0.5 + base * 0.5)),
+    tail: Math.min(100, Math.floor(modelMapping.output * 0.4 + benchmark.speedScore * 0.3 + base * 0.3)),
     strength: Math.min(100, base + 12),
-    agility: Math.min(100, base + 18),
-    endurance: Math.min(100, Math.floor(modelMapping.efficiency * 0.5 + base * 0.5)),
+    agility: Math.min(100, Math.floor(base * 0.6 + benchmark.latencyScore * 0.4)),
+    endurance: Math.min(100, Math.floor(modelMapping.efficiency * 0.35 + benchmark.costScore * 0.35 + base * 0.3)),
   };
 }
 
@@ -243,8 +251,8 @@ export async function getLobsterStats(): Promise<LobsterStats> {
     
     limbs,
     
-    intelligence: Math.floor((brain.cerebral + brain.neurons) / 2),
-    memoryScore: Math.floor((brain.longTerm + brain.episodic) / 2),
+    intelligence: Math.floor((brain.cerebral * 0.5) + (brain.neurons * 0.2) + (modelMapping.benchmark.intelligence * 0.3)),
+    memoryScore: Math.floor((brain.longTerm * 0.45) + (brain.episodic * 0.2) + (modelMapping.benchmark.contextScore * 0.35)),
     skills: skillCount,
     experiencePool: Math.floor(tokenStats.totalSessions / 5),
     
