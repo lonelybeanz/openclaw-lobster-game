@@ -1,3 +1,5 @@
+import type { InteractResult } from './types';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/admin-api';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -28,7 +30,7 @@ export async function getLobsterNews(): Promise<any[]> {
   return request('/lobster/news');
 }
 
-export async function interact(action: 'feed' | 'train' | 'rest'): Promise<any> {
+export async function interact(action: 'feed' | 'train' | 'rest'): Promise<InteractResult> {
   return request('/lobster/interact', {
     method: 'POST',
     body: JSON.stringify({ action }),

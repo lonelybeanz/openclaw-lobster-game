@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getAchievements, getLobsterNews, getLobsterStats, interact } from '../api';
-import type { LobsterNewsItem, LobsterStats } from '../types';
+import type { LobsterNewsItem, LobsterStats, RandomEvent } from '../types';
 
 type ActionType = 'feed' | 'train' | 'rest';
 
@@ -83,6 +83,29 @@ function formatUnlockTime(item: AchievementItem) {
   return dt.toLocaleString('zh-CN');
 }
 
+function formatEventEffect(event: RandomEvent | null) {
+  if (!event?.effect) {
+    return '';
+  }
+  const fields: Array<{ key: keyof NonNullable<RandomEvent['effect']>; label: string }> = [
+    { key: 'experience', label: '经验' },
+    { key: 'mood', label: '心情' },
+    { key: 'hunger', label: '饱食度' },
+    { key: 'fatigue', label: '疲劳' },
+    { key: 'loyalty', label: '忠诚' },
+  ];
+  const effects = fields
+    .map(({ key, label }) => {
+      const val = event.effect?.[key];
+      if (typeof val !== 'number' || !Number.isFinite(val) || val === 0) {
+        return null;
+      }
+      return `${label}${val > 0 ? '+' : ''}${val}`;
+    })
+    .filter(Boolean);
+  return effects.join('，');
+}
+
 export default function LobsterPage() {
   const [stats, setStats] = useState<LobsterStats | null>(null);
   const [news, setNews] = useState<LobsterNewsItem[]>([]);
@@ -101,6 +124,7 @@ export default function LobsterPage() {
   const [achievementsLoading, setAchievementsLoading] = useState(false);
   const [achievementsError, setAchievementsError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [randomEventPrompt, setRandomEventPrompt] = useState<RandomEvent | null>(null);
 
   async function loadStats() {
     try {
@@ -182,11 +206,17 @@ export default function LobsterPage() {
     try {
       setActionLoading(true);
       const result = await interact(action);
-      const { message, expGained, ...statePatch } = (result || {}) as Record<string, unknown>;
+      const { message, expGained, randomEvent: rawRandomEvent, ...statePatch } = (result || {}) as Record<string, unknown>;
       setStats((prev) => (prev ? ({ ...prev, ...statePatch } as LobsterStats) : prev));
       setDelta(initialDelta);
+      const randomEvent =
+        typeof rawRandomEvent === 'object' && rawRandomEvent
+          ? (rawRandomEvent as RandomEvent)
+          : null;
+      setRandomEventPrompt(randomEvent);
       const gained = typeof expGained === 'number' && expGained > 0 ? `（+${expGained} EXP）` : '';
-      setLastAction(`${typeof message === 'string' ? message : '互动完成'}${gained}`);
+      const eventText = randomEvent ? ` | 随机事件：${randomEvent.title}` : '';
+      setLastAction(`${typeof message === 'string' ? message : '互动完成'}${gained}${eventText}`);
     } catch (e) {
       setLastAction(`互动失败：${e instanceof Error ? e.message : '未知错误'}`);
     } finally {
@@ -377,6 +407,13 @@ export default function LobsterPage() {
               >
                 🏆 成就
               </button>
+              {randomEventPrompt ? (
+                <div className="random-event-tip">
+                  <p className="random-event-title">🎲 {randomEventPrompt.title}</p>
+                  <p>{randomEventPrompt.description}</p>
+                  {formatEventEffect(randomEventPrompt) ? <p className="random-event-effect">{formatEventEffect(randomEventPrompt)}</p> : null}
+                </div>
+              ) : null}
               <p className="hint">互动行为已写入服务端持久化状态。</p>
             </article>
           </section>

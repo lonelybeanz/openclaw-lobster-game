@@ -71,7 +71,8 @@ app.post('/lobster/interact', async (c) => {
     data: {
       ...result.state,
       message: result.message,
-      expGained: result.exp
+      expGained: result.exp,
+      randomEvent: result.randomEvent
     } 
   });
 });
