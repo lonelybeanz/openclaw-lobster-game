@@ -294,6 +294,25 @@ export async function fetchModelBenchmarks(): Promise<ModelBenchmarkItem[]> {
   }
 }
 
+function extractModelFamily(normalized: string): string {
+  // Extract the base family name before common variant suffixes
+  // e.g. "deepseekchat" → "deepseek", "gpt4o" → "gpt"
+  const patterns = [
+    /^(gpt[34o]+)/,       // gpt3, gpt4, gpt4o
+    /^(deepseek)/,        // deepseek-chat, deepseek-v3, deepseek-r1
+    /^(claude)/,          // claude-3, claude-3.5
+    /^(gemini)/,          // gemini-1.5, gemini-2
+    /^(minimax)/,         // minimax-m2.5
+    /^(llama)/,           // llama-3
+    /^(qwen)/,            // qwen-2.5
+  ];
+  for (const pat of patterns) {
+    const m = normalized.match(pat);
+    if (m?.[1]) return m[1];
+  }
+  return '';
+}
+
 function findBestBenchmarkMatch(
   benchmarks: ModelBenchmarkItem[],
   modelId: string,
@@ -303,12 +322,14 @@ function findBestBenchmarkMatch(
   const nameNorm = normalizeModelName(modelName);
   if (!idNorm && !nameNorm) return null;
 
+  // 1. Exact match
   const exact = benchmarks.find((item) => {
     const itemNorm = normalizeModelName(item.model);
     return itemNorm === idNorm || itemNorm === nameNorm;
   });
   if (exact) return exact;
 
+  // 2. Substring fuzzy match (original logic)
   const fuzzy = benchmarks.find((item) => {
     const itemNorm = normalizeModelName(item.model);
     return (
@@ -316,7 +337,21 @@ function findBestBenchmarkMatch(
       (!!nameNorm && (itemNorm.includes(nameNorm) || nameNorm.includes(itemNorm)))
     );
   });
-  return fuzzy ?? null;
+  if (fuzzy) return fuzzy;
+
+  // 3. Family-level match: "deepseek-chat" ↔ "DeepSeek-V3" both → "deepseek"
+  const idFamily = extractModelFamily(idNorm);
+  const nameFamily = extractModelFamily(nameNorm);
+  if (idFamily || nameFamily) {
+    const familyMatch = benchmarks.find((item) => {
+      const itemNorm = normalizeModelName(item.model);
+      const itemFamily = extractModelFamily(itemNorm);
+      return (!!idFamily && itemFamily === idFamily) || (!!nameFamily && itemFamily === nameFamily);
+    });
+    if (familyMatch) return familyMatch;
+  }
+
+  return null;
 }
 
 export async function getCurrentModelBenchmarks(): Promise<ModelBenchmarkItem | null> {

@@ -113,6 +113,27 @@ export type LobsterNewsItem = {
   content?: string;
 };
 
+export type RandomEvent = {
+  id: string;
+  title: string;
+  description: string;
+  effect?: {
+    mood?: number;
+    hunger?: number;
+    fatigue?: number;
+    experience?: number;
+    loyalty?: number;
+  };
+  probability?: number;
+};
+
+export type InteractResult = {
+  message: string;
+  expGained: number;
+  randomEvent?: RandomEvent | null;
+  [key: string]: unknown;
+};
+
 export type Achievement = {
   id: string;
   name: string;
