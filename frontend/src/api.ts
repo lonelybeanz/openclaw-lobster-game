@@ -1,4 +1,4 @@
-import type { InteractResult } from './types';
+import type { InteractResult, LobsterNewsItem, SearchNewsResponse } from './types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/admin-api';
 
@@ -26,7 +26,7 @@ export async function getLobsterStats(): Promise<any> {
   return request('/lobster/stats');
 }
 
-export async function getLobsterNews(): Promise<any[]> {
+export async function getLobsterNews(): Promise<LobsterNewsItem[]> {
   return request('/lobster/news');
 }
 
@@ -64,9 +64,14 @@ export async function deepTalk(message: string): Promise<any> {
 }
 
 // 搜索资讯 - 使用 OpenClaw 获取网上最新资讯
-export async function searchNews(query: string): Promise<any> {
+export async function searchNews(query: string, asyncMode = false): Promise<SearchNewsResponse> {
   return request('/lobster/search-news', {
     method: 'POST',
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ query, async: asyncMode }),
   });
+}
+
+// 获取搜索结果（轮询）
+export async function getSearchResult(jobId: string): Promise<SearchNewsResponse> {
+  return request(`/lobster/search-result/${jobId}`);
 }

@@ -139,3 +139,20 @@ export type Achievement = {
   name: string;
   unlocked: boolean;
 };
+
+export type AchievementItem = Achievement & {
+  icon?: string;
+  description?: string;
+  unlockedAt?: string;
+  unlockTime?: string;
+  unlocked_at?: string;
+  achievedAt?: string;
+};
+
+export type SearchNewsResponse = {
+  success: boolean;
+  results?: LobsterNewsItem[];
+  jobId?: string;
+  status?: 'pending' | 'done' | 'error';
+  error?: string;
+};

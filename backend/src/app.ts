@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { getCompleteLobsterStats } from './services/complete';
-import { getOpenClawNews, searchGitHubNews, searchWithOpenClaw } from './services/news';
+import { getOpenClawNews, searchWithOpenClaw, searchWithOpenClawAsync, getSearchResult } from './services/news';
 import { getTokenStats, initTokenStats, updateTokenStats } from './services/tokenStats';
 import { interact, loadLobsterState, getAchievements, saveLobsterState } from './services/persistence';
 import { initModelBenchmarkUpdater } from './services/modelBenchmark';
@@ -87,13 +87,26 @@ app.get('/lobster/news', async (c) => {
 });
 
 app.post('/lobster/search-news', async (c) => {
-  const { query } = await c.req.json();
+  const { query, async: asyncMode } = await c.req.json().catch(() => ({ query: '', async: false }));
   if (!query) {
     return c.json({ code: 1, message: '请提供搜索关键词' }, 400);
   }
-  // 使用 OpenClaw 搜索互联网资讯
+
+  if (asyncMode) {
+    const jobId = await searchWithOpenClawAsync(query);
+    return c.json({ code: 0, data: { success: true, jobId, status: 'pending' } });
+  }
+
   const results = await searchWithOpenClaw(query);
   return c.json({ code: 0, data: { success: true, results } });
+});
+
+app.get('/lobster/search-result/:jobId', async (c) => {
+  const jobId = c.req.param('jobId');
+  if (!jobId) {
+    return c.json({ code: 1, message: '缺少 jobId' }, 400);
+  }
+  return c.json({ code: 0, data: getSearchResult(jobId) });
 });
 
 app.get('/lobster/tokens', async (c) => {

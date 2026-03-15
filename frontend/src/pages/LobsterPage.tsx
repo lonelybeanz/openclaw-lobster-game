@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getLobsterNews, getLobsterStats, interact, getMilestones, getCareMessage, deepTalk, searchNews } from '../api';
-import type { LobsterNewsItem, LobsterStats, RandomEvent } from '../types';
+import type { AchievementItem, LobsterNewsItem, LobsterStats, RandomEvent } from '../types';
 
 type ActionType = 'feed' | 'train' | 'rest';
 
@@ -17,6 +17,19 @@ const initialDelta: DeltaState = {
   fatigue: 0,
   experience: 0,
 };
+
+function normalizeNewsItem(item: Partial<LobsterNewsItem>, index: number): LobsterNewsItem {
+  return {
+    id: item.id || `news-${index}`,
+    title: item.title || '无标题',
+    summary: item.summary || item.content || '暂无简介',
+    source: item.source || '未知来源',
+    date: item.date || item.publishedAt || '',
+    content: item.content || item.summary || '',
+    url: item.url,
+    publishedAt: item.publishedAt || item.date,
+  };
+}
 
 function clamp(value: number, min = 0, max = 100) {
   return Math.min(max, Math.max(min, value));
@@ -124,13 +137,11 @@ export default function LobsterPage() {
     try {
       setNewsLoading(true);
       setNewsError(null);
-      console.log('[Lobster] 加载资讯中...');
       const data = await getLobsterNews();
-      console.log('[Lobster] 资讯数据:', data);
-      setNews(data);
-      setExpandedNewsId((prev) => (prev && data.some((item) => item.id === prev) ? prev : data[0]?.id ?? null));
+      const normalized = (Array.isArray(data) ? data : []).map(normalizeNewsItem);
+      setNews(normalized);
+      setExpandedNewsId((prev) => (prev && normalized.some((item) => item.id === prev) ? prev : normalized[0]?.id ?? null));
     } catch (e) {
-      console.error('[Lobster] 加载资讯失败:', e);
       setNewsError(e instanceof Error ? e.message : '加载失败');
     } finally {
       setNewsLoading(false);
@@ -188,16 +199,18 @@ export default function LobsterPage() {
   async function handleSearch() {
     if (!searchQuery.trim()) return;
     setSearchLoading(true);
+    setSearchResults(null);
     try {
       const result = await searchNews(searchQuery);
-      if (result?.code === 0 && result?.data?.results) {
-        setSearchResults(result.data.results);
-        setLastAction('资讯搜索完成！🔍');
+      const results = Array.isArray(result?.results) ? result.results.map(normalizeNewsItem) : [];
+      if (results && results.length > 0) {
+        setSearchResults(results);
+        setNewsSubTab('search');
+        setLastAction('搜索完成！🔍');
       } else {
-        setLastAction('搜索失败：' + (result?.message || '未知错误'));
+        setLastAction('未找到结果');
       }
     } catch (e) {
-      console.error('搜索失败:', e);
       setLastAction('搜索失败');
     } finally {
       setSearchLoading(false);
@@ -689,6 +702,9 @@ export default function LobsterPage() {
                           {expanded ? (
                             <div className="lobster-news-detail">
                               <div style={{ fontSize: '11px', color: '#888', marginBottom: '8px' }}>{item.date} · {item.source}</div>
+                              <p style={{ margin: '0 0 10px 0', lineHeight: '1.6', color: '#d6d8e6' }}>
+                                {item.content || item.summary}
+                              </p>
                               {item.url ? (
                                 <a href={item.url} target="_blank" rel="noreferrer" style={{ color: '#667eea', fontSize: '13px' }}>
                                   查看原文 →
