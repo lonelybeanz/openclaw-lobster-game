@@ -90,6 +90,15 @@ export function triggerRandomEvent(): RandomEvent | null {
   return events[events.length - 1] ?? null;
 }
 
+// 按概率尝试触发随机事件
+export function maybeTriggerRandomEvent(chance = 0.3): RandomEvent | null {
+  const safeChance = Math.max(0, Math.min(1, chance));
+  if (Math.random() > safeChance) {
+    return null;
+  }
+  return triggerRandomEvent();
+}
+
 // 获取所有事件
 export function getAllEvents(): RandomEvent[] {
   return events;

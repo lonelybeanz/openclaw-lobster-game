@@ -50,6 +50,30 @@ export type LobsterMemory = {
   completeness?: number;
 };
 
+export type BenchmarkScores = {
+  intelligence: number;
+  reasoningScore: number;
+  contextScore: number;
+  speedScore: number;
+  latencyScore: number;
+  costScore: number;
+};
+
+export type ModelBrainMapping = {
+  reasoning: number;
+  logic: number;
+  vision: number;
+  perception: number;
+  contextWindow: number;
+  shortMemory: number;
+  coding: number;
+  creativity: number;
+  emotion: number;
+  output: number;
+  efficiency: number;
+  benchmark: BenchmarkScores;
+};
+
 export type LobsterStats = {
   name: string;
   avatar: string;
@@ -73,6 +97,7 @@ export type LobsterStats = {
   lastActive: string;
   totalInteractions?: number;
   brain?: any;
+  brainMapping?: ModelBrainMapping;
   limbs?: any;
   memory?: LobsterMemory;
 };
@@ -86,6 +111,27 @@ export type LobsterNewsItem = {
   publishedAt?: string;
   date?: string;
   content?: string;
+};
+
+export type RandomEvent = {
+  id: string;
+  title: string;
+  description: string;
+  effect?: {
+    mood?: number;
+    hunger?: number;
+    fatigue?: number;
+    experience?: number;
+    loyalty?: number;
+  };
+  probability?: number;
+};
+
+export type InteractResult = {
+  message: string;
+  expGained: number;
+  randomEvent?: RandomEvent | null;
+  [key: string]: unknown;
 };
 
 export type Achievement = {

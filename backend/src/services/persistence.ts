@@ -1,5 +1,6 @@
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
+import { maybeTriggerRandomEvent, RandomEvent } from './events';
 
 const DATA_DIR = '/Users/moltbot/.openclaw/workspace/projects/openclaw-lobster-game/data';
 const STATE_FILE = join(DATA_DIR, 'lobster-state.json');
@@ -15,6 +16,13 @@ export interface LobsterState {
   lastInteraction: string;
   totalInteractions: number;
   achievements: string[];
+  // 成长里程碑字段
+  consecutiveDays: number;
+  lastActiveDate: string;
+  firstMeet?: string;
+  midnightCount: number;
+  deepTalkCount: number;
+  challengesCompleted: number;
   lastFed?: string;
   lastTrained?: string;
   lastRested?: string;
@@ -30,7 +38,14 @@ const defaultState: LobsterState = {
   loyalty: 50,
   lastInteraction: new Date().toISOString(),
   totalInteractions: 0,
-  achievements: []
+  achievements: [],
+  // 成长里程碑默认值
+  consecutiveDays: 1,
+  lastActiveDate: new Date().toISOString().split('T')[0],
+  firstMeet: new Date().toISOString(),
+  midnightCount: 0,
+  deepTalkCount: 0,
+  challengesCompleted: 0
 };
 
 let stateWriteQueue: Promise<void> = Promise.resolve();
@@ -107,7 +122,7 @@ function applyAchievementRules(state: LobsterState, action: 'feed' | 'train' | '
 }
 
 // 交互动作
-export async function interact(action: 'feed' | 'train' | 'rest'): Promise<{ state: LobsterState; exp: number; message: string }> {
+export async function interact(action: 'feed' | 'train' | 'rest'): Promise<{ state: LobsterState; exp: number; message: string; randomEvent: RandomEvent | null }> {
   return queueStateWrite(async () => {
     const state = await loadLobsterState();
     let exp = 0;
@@ -124,7 +139,7 @@ export async function interact(action: 'feed' | 'train' | 'rest'): Promise<{ sta
         break;
       case 'train':
         if (state.fatigue >= 90) {
-          return { state, exp: 0, message: '😴 太累了，需要休息！' };
+          return { state, exp: 0, message: '😴 太累了，需要休息！', randomEvent: null };
         }
         state.experience += 30;
         state.fatigue = Math.min(100, state.fatigue + 15);
@@ -140,6 +155,28 @@ export async function interact(action: 'feed' | 'train' | 'rest'): Promise<{ sta
         message = '😴 休息完毕！疲劳 -30，心情 +10';
         state.lastRested = now;
         break;
+    }
+
+    const randomEvent = maybeTriggerRandomEvent(0.35);
+    if (randomEvent) {
+      const { effect } = randomEvent;
+      if (typeof effect.hunger === 'number') {
+        state.hunger = Math.max(0, Math.min(100, state.hunger + effect.hunger));
+      }
+      if (typeof effect.mood === 'number') {
+        state.mood = Math.max(0, Math.min(100, state.mood + effect.mood));
+      }
+      if (typeof effect.fatigue === 'number') {
+        state.fatigue = Math.max(0, Math.min(100, state.fatigue + effect.fatigue));
+      }
+      if (typeof effect.loyalty === 'number') {
+        state.loyalty = Math.max(0, Math.min(100, state.loyalty + effect.loyalty));
+      }
+      if (typeof effect.experience === 'number') {
+        state.experience = Math.max(0, state.experience + effect.experience);
+        exp += effect.experience;
+      }
+      message += `\n🎲 随机事件触发：${randomEvent.title} - ${randomEvent.description}`;
     }
 
     const expNeeded = state.level * 500;
@@ -158,7 +195,7 @@ export async function interact(action: 'feed' | 'train' | 'rest'): Promise<{ sta
     }
 
     await saveLobsterState(state);
-    return { state, exp, message };
+    return { state, exp, message, randomEvent };
   });
 }
 

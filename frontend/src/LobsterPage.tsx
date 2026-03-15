@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getLobsterNews, getLobsterStats, interact, getMilestones, getCareMessage, deepTalk, searchNews } from '../api';
-import type { LobsterNewsItem, LobsterStats, RandomEvent } from '../types';
+import { getAchievements, getLobsterNews, getLobsterStats, interact } from './api';
+import type { LobsterNewsItem, LobsterStats } from './types';
 
 type ActionType = 'feed' | 'train' | 'rest';
 
@@ -9,6 +9,18 @@ type DeltaState = {
   mood: number;
   fatigue: number;
   experience: number;
+};
+
+type AchievementItem = {
+  id: string;
+  name: string;
+  unlocked: boolean;
+  icon?: string;
+  description?: string;
+  unlockedAt?: string;
+  unlockTime?: string;
+  unlocked_at?: string;
+  achievedAt?: string;
 };
 
 const initialDelta: DeltaState = {
@@ -44,35 +56,31 @@ function toNumber(value: unknown) {
   return 0;
 }
 
-function formatEventEffect(event: RandomEvent | null) {
-  if (!event?.effect) {
-    return '';
-  }
-  const fields: Array<{ key: keyof NonNullable<RandomEvent['effect']>; label: string }> = [
-    { key: 'experience', label: '经验' },
-    { key: 'mood', label: '心情' },
-    { key: 'hunger', label: '饱食度' },
-    { key: 'fatigue', label: '疲劳' },
-    { key: 'loyalty', label: '忠诚' },
-  ];
-  const effects = fields
-    .map(({ key, label }) => {
-      const val = event.effect?.[key];
-      if (typeof val !== 'number' || !Number.isFinite(val) || val === 0) {
-        return null;
-      }
-      return `${label}${val > 0 ? '+' : ''}${val}`;
-    })
-    .filter(Boolean);
-  return effects.join('，');
+function normalizeAchievement(raw: unknown, index: number): AchievementItem {
+  const item = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
+  return {
+    id: String(item.id ?? `achievement-${index}`),
+    name: String(item.name ?? '未命名成就'),
+    unlocked: Boolean(item.unlocked),
+    icon: typeof item.icon === 'string' ? item.icon : undefined,
+    description: typeof item.description === 'string' ? item.description : undefined,
+    unlockedAt: typeof item.unlockedAt === 'string' ? item.unlockedAt : undefined,
+    unlockTime: typeof item.unlockTime === 'string' ? item.unlockTime : undefined,
+    unlocked_at: typeof item.unlocked_at === 'string' ? item.unlocked_at : undefined,
+    achievedAt: typeof item.achievedAt === 'string' ? item.achievedAt : undefined,
+  };
 }
 
-function sourceTip(text: string) {
-  return (
-    <span className="source-tip" data-tip={text} role="note" aria-label={`数据来源：${text}`}>
-      ⓘ
-    </span>
-  );
+function formatUnlockTime(item: AchievementItem) {
+  const raw = item.unlockedAt ?? item.unlockTime ?? item.unlocked_at ?? item.achievedAt;
+  if (!raw) {
+    return '--';
+  }
+  const dt = new Date(raw);
+  if (Number.isNaN(dt.getTime())) {
+    return raw;
+  }
+  return dt.toLocaleString('zh-CN');
 }
 
 export default function LobsterPage() {
@@ -86,24 +94,13 @@ export default function LobsterPage() {
   const [lastAction, setLastAction] = useState<string>('等待互动');
   const [expandedNewsId, setExpandedNewsId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'status' | 'evolution' | 'memory' | 'news'>('status');
-  const [newsSubTab, setNewsSubTab] = useState<'github' | 'search'>('github');
   const [showFormulaGuide, setShowFormulaGuide] = useState(false);
   const [activeFormula, setActiveFormula] = useState<string | null>(null);
-  const [showMilestoneModal, setShowMilestoneModal] = useState(false);
-  const [milestones, setMilestones] = useState<any[]>([]);
-  const [milestonesLoading, setMilestonesLoading] = useState(false);
-  const [careMessage, setCareMessage] = useState<string | null>(null);
-  const [deepTalkLoading, setDeepTalkLoading] = useState(false);
-  const [deepTalkInput, setDeepTalkInput] = useState('');
-  const [searchQuery, setSearchQuery] = useState('OpenClaw 最新版本 新功能 教程');
-  const [searchResults, setSearchResults] = useState<any[] | null>(null);
-  const [searchLoading, setSearchLoading] = useState(false);
   const [showAchievementModal, setShowAchievementModal] = useState(false);
   const [achievements, setAchievements] = useState<AchievementItem[]>([]);
   const [achievementsLoading, setAchievementsLoading] = useState(false);
   const [achievementsError, setAchievementsError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const [randomEventPrompt, setRandomEventPrompt] = useState<RandomEvent | null>(null);
 
   async function loadStats() {
     try {
@@ -124,13 +121,10 @@ export default function LobsterPage() {
     try {
       setNewsLoading(true);
       setNewsError(null);
-      console.log('[Lobster] 加载资讯中...');
       const data = await getLobsterNews();
-      console.log('[Lobster] 资讯数据:', data);
       setNews(data);
       setExpandedNewsId((prev) => (prev && data.some((item) => item.id === prev) ? prev : data[0]?.id ?? null));
     } catch (e) {
-      console.error('[Lobster] 加载资讯失败:', e);
       setNewsError(e instanceof Error ? e.message : '加载失败');
     } finally {
       setNewsLoading(false);
@@ -141,66 +135,18 @@ export default function LobsterPage() {
     await Promise.all([loadStats(), loadNews()]);
   }
 
-  async function openMilestoneModal() {
-    setShowMilestoneModal(true);
-    setMilestonesLoading(true);
+  async function openAchievementModal() {
+    setShowAchievementModal(true);
+    setAchievementsLoading(true);
+    setAchievementsError(null);
     try {
-      const [milestoneData, careData] = await Promise.all([getMilestones(), getCareMessage()]);
-      setMilestones(milestoneData?.milestones || []);
-      setCareMessage(careData?.message);
+      const data = await getAchievements();
+      const normalized = (Array.isArray(data) ? data : []).map((item, index) => normalizeAchievement(item, index));
+      setAchievements(normalized.filter((item) => item.unlocked));
     } catch (e) {
-      console.error('加载成长记录失败:', e);
+      setAchievementsError(e instanceof Error ? e.message : '加载失败');
     } finally {
-      setMilestonesLoading(false);
-    }
-  }
-
-  async function handleDeepTalk() {
-    if (!deepTalkInput.trim()) {
-      setLastAction('请输入想说的话~');
-      return;
-    }
-    setDeepTalkLoading(true);
-    try {
-      const result = await deepTalk(deepTalkInput);
-      
-      // 刷新里程碑
-      const data = await getMilestones();
-      setMilestones(data?.milestones || []);
-      
-      // 显示小龙虾的回复
-      if (result?.reply) {
-        setLastAction(`小龙虾: ${result.reply}`);
-      } else if (result?.success) {
-        setLastAction('深度对话成功！🧠');
-      } else {
-        setLastAction('对话已发送~');
-      }
-      setDeepTalkInput('');
-    } catch (e) {
-      console.error('深度对话失败:', e);
-      setLastAction('对话发送失败');
-    } finally {
-      setDeepTalkLoading(false);
-    }
-  }
-
-  async function handleSearch() {
-    if (!searchQuery.trim()) return;
-    setSearchLoading(true);
-    try {
-      const result = await searchNews(searchQuery);
-      if (result?.code === 0 && result?.data?.results) {
-        setSearchResults(result.data.results);
-        setLastAction('资讯搜索完成！🔍');
-      } else {
-        setLastAction('搜索失败：' + (result?.message || '未知错误'));
-      }
-    } catch (e) {
-      console.error('搜索失败:', e);
-      setLastAction('搜索失败');
-    } finally {
-      setSearchLoading(false);
+      setAchievementsLoading(false);
     }
   }
 
@@ -236,17 +182,11 @@ export default function LobsterPage() {
     try {
       setActionLoading(true);
       const result = await interact(action);
-      const { message, expGained, randomEvent: rawRandomEvent, ...statePatch } = (result || {}) as Record<string, unknown>;
+      const { message, expGained, ...statePatch } = (result || {}) as Record<string, unknown>;
       setStats((prev) => (prev ? ({ ...prev, ...statePatch } as LobsterStats) : prev));
       setDelta(initialDelta);
-      const randomEvent =
-        typeof rawRandomEvent === 'object' && rawRandomEvent
-          ? (rawRandomEvent as RandomEvent)
-          : null;
-      setRandomEventPrompt(randomEvent);
       const gained = typeof expGained === 'number' && expGained > 0 ? `（+${expGained} EXP）` : '';
-      const eventText = randomEvent ? ` | 随机事件：${randomEvent.title}` : '';
-      setLastAction(`${typeof message === 'string' ? message : '互动完成'}${gained}${eventText}`);
+      setLastAction(`${typeof message === 'string' ? message : '互动完成'}${gained}`);
     } catch (e) {
       setLastAction(`互动失败：${e instanceof Error ? e.message : '未知错误'}`);
     } finally {
@@ -294,11 +234,11 @@ export default function LobsterPage() {
     intelligenceScore * 0.25 + perceptionScore * 0.2 + memoryScore * 0.2 + reactionScore * 0.2 + growthScore * 0.15;
 
   const majorMetrics = [
-    { key: 'intelligence', label: '智力', value: intelligenceScore, formula: '脑神经×0.3 + 神经元×0.2 + 推理×0.5', rule: '影响学习速度和问题解决能力' },
-    { key: 'perception', label: '感知', value: perceptionScore, formula: '视叶×0.35 + 触角叶×0.35 + 触角×0.15 + 脑干×0.15', rule: '影响信息采集和环境感知能力' },
-    { key: 'memory', label: '记忆力', value: memoryScore, formula: '短期×0.2 + 长期×0.3 + 情景×0.2 + 程序×0.2', rule: '影响记忆存储和检索能力' },
-    { key: 'reaction', label: '反应', value: reactionScore, formula: '小脑×0.3 + 脑干×0.25 + 敏捷×0.25 + 杏仁核×0.2', rule: '影响行动响应速度' },
-    { key: 'growth', label: '成长值', value: growthScore, formula: 'EXP进度×0.35 + 等级×0.25 + 耐力×0.2 + 心情×0.1', rule: '影响进化速度和上限' },
+    { key: 'intelligence', label: '智力', value: intelligenceScore, formula: '智力 = 脑神经/神经元/推理得分 + Benchmark intelligence_index' },
+    { key: 'perception', label: '感知', value: perceptionScore, formula: '感知 = 视叶/触角叶/触角 + Benchmark context score' },
+    { key: 'memory', label: '记忆力', value: memoryScore, formula: '记忆力 = 短期/长期/情景/程序记忆 + Benchmark context score' },
+    { key: 'reaction', label: '反应', value: reactionScore, formula: '反应 = 小脑/脑干/敏捷 + Benchmark speed/latency score' },
+    { key: 'growth', label: '成长值', value: growthScore, formula: '成长值 = 经验/等级/耐力 + Benchmark cost score' },
   ] as const;
 
   return (
@@ -308,23 +248,45 @@ export default function LobsterPage() {
       <div className="bg-orb bg-orb-three" />
 
       <header className="header lobster-header glass-card fade-in-up">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <div style={{ fontSize: '48px', lineHeight: 1 }}>🦞</div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '14px', color: '#aaa', marginBottom: '4px' }}>最近互动</div>
-            <div style={{ fontSize: '15px', color: '#fff' }}>{lastAction}</div>
-          </div>
+        <div>
+          <p className="eyebrow">OpenClaw Lobster</p>
+          <h1>龙虾养成面板</h1>
+          <p className="lobster-subtitle">根据 /lobster/stats 实时数据渲染属性与状态。</p>
         </div>
-        <button className="refresh-btn" type="button" onClick={() => void refreshAll()} disabled={loading || newsLoading}>
-          {loading || newsLoading ? '同步中...' : '🔄'}
-        </button>
+        <div className="header-right">
+          <p>最近互动</p>
+          <strong>{lastAction}</strong>
+          <button className="refresh-btn" type="button" onClick={() => void refreshAll()} disabled={loading || newsLoading}>
+            {loading || newsLoading ? '同步中...' : '刷新状态'}
+          </button>
+        </div>
       </header>
       <div style={{display:"flex", gap:"8px", marginBottom:"15px", padding:"0 20px"}}>
         <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="status"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("status")}>📊状态</button>
-        <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="evolution"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("evolution")}>🧬进化</button>
+        <div style={{display:"flex", flex:1, gap:"6px", alignItems:"center"}}>
+          <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="evolution"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("evolution")}>🧬进化</button>
+          <button
+            type="button"
+            aria-label="查看进化计算公式"
+            style={{padding:"10px 12px", border:"1px solid rgba(255,255,255,0.2)", borderRadius:"8px", background:showFormulaGuide?"rgba(102,126,234,0.5)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}}
+            onClick={() => setShowFormulaGuide((prev) => !prev)}
+          >
+            ？
+          </button>
+        </div>
         <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="memory"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("memory")}>💾记忆</button>
         <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="news"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("news")}>📰资讯</button>
       </div>
+      {showFormulaGuide ? (
+        <section
+          className="panel glass-card"
+          style={{ margin: '0 20px 15px', padding: '12px 14px', border: '1px dashed rgba(255,255,255,0.3)' }}
+        >
+          <h4 style={{ margin: '0 0 8px 0' }}>进化计算公式说明</h4>
+          <p style={{ margin: '0 0 6px 0' }}>综合进化得分 = 智力×0.25 + 感知×0.2 + 记忆力×0.2 + 反应×0.2 + 成长值×0.15</p>
+          <p style={{ margin: 0, opacity: 0.85 }}>提示：点击下方每个主要属性右侧的小气泡可查看该属性的详细公式。</p>
+        </section>
+      ) : null}
       {error ? <div className="panel error glass-card">数据加载失败：{error}</div> : null}
       {loading && !stats ? <div className="panel glass-card">正在加载龙虾状态...</div> : null}
       {newsError ? <div className="panel error glass-card">资讯加载失败：{newsError}</div> : null}
@@ -338,13 +300,13 @@ export default function LobsterPage() {
                 <div className="lobster-avatar">🦞</div>
                 <span className="sparkle sparkle-right">✨</span>
               </div>
-              <p className="lobster-level">Lv.{view.level} {sourceTip('来自: Tokens / 50000')}</p>
+              <p className="lobster-level">Lv.{view.level}</p>
               <h2>成长进度</h2>
               <div className="meter-track meter-track-exp">
                 <div className="meter-fill meter-fill-exp" style={{ width: `${expRatio}%` }} />
               </div>
               <p className="meter-text">
-                EXP {formatNumber(view.experience)} / {formatNumber(view.maxExperience)} {sourceTip('来自: totalTokens % 50000')}
+                EXP {formatNumber(view.experience)} / {formatNumber(view.maxExperience)}
               </p>
               <p className="lobster-age">寿命：{view.age} 天</p>
             </article>
@@ -355,7 +317,7 @@ export default function LobsterPage() {
               <div className="status-list">
                 <div className="status-item">
                   <div className="status-title-row">
-                    <span>🍤 饱食度 {sourceTip('来自: lobster-state.hunger')}</span>
+                    <span>🍤 饱食度</span>
                     <strong>{view.hunger}</strong>
                   </div>
                   <div className="meter-track">
@@ -365,7 +327,7 @@ export default function LobsterPage() {
 
                 <div className="status-item">
                   <div className="status-title-row">
-                    <span>💖 心情 {sourceTip('来自: lobster-state.mood')}</span>
+                    <span>💖 心情</span>
                     <strong>{view.mood}</strong>
                   </div>
                   <div className="meter-track">
@@ -375,7 +337,7 @@ export default function LobsterPage() {
 
                 <div className="status-item">
                   <div className="status-title-row">
-                    <span>😴 疲劳度 {sourceTip('来自: lobster-state.fatigue')}</span>
+                    <span>😴 疲劳度</span>
                     <strong>{view.fatigue}</strong>
                   </div>
                   <div className="meter-track">
@@ -385,7 +347,7 @@ export default function LobsterPage() {
 
                 <div className="status-item">
                   <div className="status-title-row">
-                    <span>🤝 忠诚度 {sourceTip('来自: lobster-state.loyalty')}</span>
+                    <span>🤝 忠诚度</span>
                     <strong>{view.loyalty}</strong>
                   </div>
                   <div className="meter-track">
@@ -394,31 +356,34 @@ export default function LobsterPage() {
                 </div>
               </div>
 
-              <div className="milestone-row">
-                <button type="button" onClick={() => void openMilestoneModal()} className="milestone-btn">
-                  🎯 成长之路
+              <div className="action-row">
+                <button type="button" onClick={() => void handleAction('feed')} disabled={actionLoading}>
+                  喂食
+                </button>
+                <button type="button" onClick={() => void handleAction('train')} disabled={actionLoading}>
+                  训练
+                </button>
+                <button type="button" onClick={() => void handleAction('rest')} disabled={actionLoading}>
+                  休息
                 </button>
               </div>
-              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                <input
-                  type="text"
-                  value={deepTalkInput}
-                  onChange={(e) => setDeepTalkInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && void handleDeepTalk()}
-                  placeholder="想对小龙虾说什么？"
-                  style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1px solid #667eea', background: 'rgba(255,255,255,0.1)', color: 'white', fontSize: '14px' }}
-                />
-                <button type="button" onClick={() => void handleDeepTalk()} disabled={deepTalkLoading} className="milestone-btn" style={{ whiteSpace: 'nowrap' }}>
-                  {deepTalkLoading ? '发送中...' : '💬 发送'}
-                </button>
-              </div>
-              {randomEventPrompt ? (
-                <div className="random-event-tip">
-                  <p className="random-event-title">🎲 {randomEventPrompt.title}</p>
-                  <p>{randomEventPrompt.description}</p>
-                  {formatEventEffect(randomEventPrompt) ? <p className="random-event-effect">{formatEventEffect(randomEventPrompt)}</p> : null}
-                </div>
-              ) : null}
+              <button
+                type="button"
+                onClick={() => void openAchievementModal()}
+                style={{
+                  width: '100%',
+                  marginTop: '10px',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(255,255,255,0.22)',
+                  background: 'linear-gradient(135deg, rgba(255,215,0,0.35), rgba(255,166,0,0.3))',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                }}
+              >
+                🏆 成就
+              </button>
               <p className="hint">互动行为已写入服务端持久化状态。</p>
             </article>
           </section>
@@ -435,30 +400,53 @@ export default function LobsterPage() {
               </article>
               {majorMetrics.map((metric) => (
                 <article key={metric.key} className="kpi-card gradient-card-soft">
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <p style={{ margin: 0, fontSize: '13px', opacity: 0.85 }}>{metric.label}</p>
-                    <span
-                      data-formula={metric.formula}
-                      data-rule={metric.rule}
-                      className="metric-tooltip"
-                      style={{
-                        width: '18px',
-                        height: '18px',
-                        borderRadius: '50%',
-                        background: 'rgba(102,126,234,0.7)',
-                        color: 'white',
-                        fontSize: '11px',
-                        lineHeight: '18px',
-                        textAlign: 'center',
-                        cursor: 'help',
-                        userSelect: 'none',
-                        display: 'inline-block',
-                      }}
-                    >
-                      ?
-                    </span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                    <p style={{ margin: 0 }}>{metric.label}</p>
+                    <div style={{ position: 'relative' }}>
+                      <button
+                        type="button"
+                        aria-label={`查看${metric.label}计算公式`}
+                        style={{
+                          minWidth: '40px',
+                          height: '24px',
+                          borderRadius: '999px',
+                          border: '1px solid rgba(255,255,255,0.25)',
+                          background: activeFormula === metric.key ? 'rgba(102,126,234,0.55)' : 'rgba(255,255,255,0.12)',
+                          color: 'white',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          lineHeight: 1,
+                          padding: '0 8px',
+                        }}
+                        onClick={() => setActiveFormula((prev) => (prev === metric.key ? null : metric.key))}
+                      >
+                        【？】
+                      </button>
+                      {activeFormula === metric.key ? (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '30px',
+                            right: 0,
+                            zIndex: 10,
+                            minWidth: '220px',
+                            maxWidth: '300px',
+                            padding: '8px 10px',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            background: 'rgba(10,12,22,0.94)',
+                            color: 'white',
+                            fontSize: '12px',
+                            lineHeight: 1.45,
+                            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.28)',
+                          }}
+                        >
+                          {metric.formula}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
-                  <h2 style={{ margin: 0, fontSize: '28px' }}>{metric.value.toFixed(1)}</h2>
+                  <h2>{metric.value.toFixed(1)}</h2>
                 </article>
               ))}
             </div>
@@ -468,27 +456,27 @@ export default function LobsterPage() {
               style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '12px' }}
             >
               <article className="kpi-card gradient-card-soft">
-                <p>Intelligence {sourceTip('来自: artificialanalysis intelligence_index')}</p>
+                <p>Intelligence</p>
                 <h2>{benchmarkIntelligence.toFixed(1)}</h2>
               </article>
               <article className="kpi-card gradient-card-soft">
-                <p>Reasoning {sourceTip('来自: reasoning_model 标记')}</p>
+                <p>Reasoning</p>
                 <h2>{benchmarkReasoning.toFixed(1)}</h2>
               </article>
               <article className="kpi-card gradient-card-soft">
-                <p>Context {sourceTip('来自: context_window')}</p>
+                <p>Context</p>
                 <h2>{benchmarkContext.toFixed(1)}</h2>
               </article>
               <article className="kpi-card gradient-card-soft">
-                <p>Speed {sourceTip('来自: output_speed / tokens_per_second')}</p>
+                <p>Speed</p>
                 <h2>{benchmarkSpeed.toFixed(1)}</h2>
               </article>
               <article className="kpi-card gradient-card-soft">
-                <p>Latency {sourceTip('来自: latency / first_token_latency')}</p>
+                <p>Latency</p>
                 <h2>{benchmarkLatency.toFixed(1)}</h2>
               </article>
               <article className="kpi-card gradient-card-soft">
-                <p>Cost {sourceTip('来自: price(input+output)')}</p>
+                <p>Cost</p>
                 <h2>{benchmarkCost.toFixed(1)}</h2>
               </article>
             </div>
@@ -498,19 +486,19 @@ export default function LobsterPage() {
               style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '12px' }}
             >
               <article className="kpi-card gradient-card-soft">
-                <p>脑神经 {sourceTip('来自: tokens + 模型推理 + benchmark intelligence')}</p>
+                <p>脑神经</p>
                 <h2>{displayValue(view.brain?.cerebral)}</h2>
               </article>
               <article className="kpi-card gradient-card-soft">
-                <p>视叶 {sourceTip('来自: tokens + 模型视觉能力')}</p>
+                <p>视叶</p>
                 <h2>{displayValue(view.brain?.opticLobes)}</h2>
               </article>
               <article className="kpi-card gradient-card-soft">
-                <p>触角叶 {sourceTip('来自: 感知能力 + benchmark context')}</p>
+                <p>触角叶</p>
                 <h2>{displayValue(view.brain?.antennaLobe)}</h2>
               </article>
               <article className="kpi-card gradient-card-soft">
-                <p>神经元 {sourceTip('来自: totalSessions + creativity')}</p>
+                <p>神经元</p>
                 <h2>{displayValue(view.brain?.neurons)}</h2>
               </article>
               <article className="kpi-card gradient-card-soft">
@@ -534,11 +522,11 @@ export default function LobsterPage() {
                 <h2>{displayValue(view.brain?.amygdala)}</h2>
               </article>
               <article className="kpi-card gradient-card-soft">
-                <p>小脑 {sourceTip('来自: coding + benchmark speed')}</p>
+                <p>小脑</p>
                 <h2>{displayValue(view.brain?.cerebellum)}</h2>
               </article>
               <article className="kpi-card gradient-card-soft">
-                <p>脑干 {sourceTip('来自: benchmark latency/reasoning')}</p>
+                <p>脑干</p>
                 <h2>{displayValue(view.brain?.brainstem)}</h2>
               </article>
             </div>
@@ -556,11 +544,11 @@ export default function LobsterPage() {
                 <h2>{displayValue(view.limbs?.legs)}</h2>
               </article>
               <article className="kpi-card gradient-card-soft">
-                <p>触角 {sourceTip('来自: contextWindow + tokens')}</p>
+                <p>触角</p>
                 <h2>{displayValue(view.limbs?.antennae)}</h2>
               </article>
               <article className="kpi-card gradient-card-soft">
-                <p>尾巴 {sourceTip('来自: output + benchmark speed')}</p>
+                <p>尾巴</p>
                 <h2>{displayValue(view.limbs?.tail)}</h2>
               </article>
               <article className="kpi-card gradient-card-soft">
@@ -568,11 +556,11 @@ export default function LobsterPage() {
                 <h2>{displayValue(view.limbs?.strength)}</h2>
               </article>
               <article className="kpi-card gradient-card-soft">
-                <p>敏捷 {sourceTip('来自: tokens + benchmark latency')}</p>
+                <p>敏捷</p>
                 <h2>{displayValue(view.limbs?.agility)}</h2>
               </article>
               <article className="kpi-card gradient-card-soft">
-                <p>耐力 {sourceTip('来自: 模型效率 + benchmark cost')}</p>
+                <p>耐力</p>
                 <h2>{displayValue(view.limbs?.endurance)}</h2>
               </article>
             </div>
@@ -585,19 +573,19 @@ export default function LobsterPage() {
               style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}
             >
               <article className="kpi-card gradient-card-soft">
-                <p>浅层记忆数 {sourceTip('来自: memory/YYYY-MM-DD-*.md 文件计数')}</p>
+                <p>浅层记忆数</p>
                 <h2>{displayValue(view.memory?.shallow?.count)}</h2>
               </article>
               <article className="kpi-card gradient-card-soft">
-                <p>记忆质量 {sourceTip('来自: 记忆内容结构评分')}</p>
+                <p>记忆质量</p>
                 <h2>{displayValue(view.memory?.shallow?.quality)}</h2>
               </article>
               <article className="kpi-card gradient-card-soft">
-                <p>组织度 {sourceTip('来自: MEMORY/SOUL/USER 等核心文件覆盖')}</p>
+                <p>组织度</p>
                 <h2>{displayValue(view.memory?.organization)}</h2>
               </article>
               <article className="kpi-card gradient-card-soft">
-                <p>完整度 {sourceTip('来自: MEMORY.md + USER.md + SOUL.md')}</p>
+                <p>完整度</p>
                 <h2>{displayValue(view.memory?.completeness)}</h2>
               </article>
               <article className="kpi-card gradient-card-soft" style={{ gridColumn: '1 / -1' }}>
@@ -627,138 +615,58 @@ export default function LobsterPage() {
           </section>
 
           <section className="panel glass-card lobster-news-panel fade-in-up delay-3 tab-content" data-tab="news">
-            {/* 子标签页 */}
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-              <button 
-                onClick={() => setNewsSubTab('github')}
-                style={{ 
-                  flex: 1, 
-                  padding: '10px', 
-                  border: 'none', 
-                  borderRadius: '8px', 
-                  background: newsSubTab === 'github' ? 'linear-gradient(135deg, #667eea, #764ba2)' : 'rgba(255,255,255,0.1)', 
-                  color: 'white', 
-                  cursor: 'pointer',
-                  fontWeight: newsSubTab === 'github' ? 'bold' : 'normal'
-                }}
-              >
-                📰 GitHub 资讯
-              </button>
-              <button 
-                onClick={() => setNewsSubTab('search')}
-                style={{ 
-                  flex: 1, 
-                  padding: '10px', 
-                  border: 'none', 
-                  borderRadius: '8px', 
-                  background: newsSubTab === 'search' ? 'linear-gradient(135deg, #667eea, #764ba2)' : 'rgba(255,255,255,0.1)', 
-                  color: 'white', 
-                  cursor: 'pointer',
-                  fontWeight: newsSubTab === 'search' ? 'bold' : 'normal'
-                }}
-              >
-                🔍 搜索结果
-              </button>
+            <div className="lobster-news-header">
+              <h3>OpenClaw 资讯专栏</h3>
+              <span>{newsLoading ? '同步资讯中...' : `共 ${news.length} 条`}</span>
             </div>
+            {newsLoading ? <p className="lobster-news-empty">正在获取最新资讯...</p> : null}
+            {!newsLoading && news.length === 0 ? <p className="lobster-news-empty">暂无资讯</p> : null}
 
-            {/* GitHub 资讯 */}
-            {newsSubTab === 'github' && (
-              <>
-                <div className="lobster-news-header">
-                  <span>{newsLoading ? '同步资讯中...' : `共 ${news.length} 条`}</span>
-                </div>
-                {newsLoading ? <p className="lobster-news-empty">正在获取最新资讯...</p> : null}
-                {!newsLoading && news.length === 0 ? <p className="lobster-news-empty">暂无资讯</p> : null}
-                {!newsLoading && news.length > 0 ? (
-                  <div className="lobster-news-list">
-                    {news.map((item) => {
-                      const expanded = expandedNewsId === item.id;
-                      return (
-                        <article key={item.id} className={`lobster-news-card ${expanded ? 'expanded' : ''}`}>
-                          <button
-                            type="button"
-                            className="lobster-news-trigger"
-                            onClick={() => setExpandedNewsId((prev) => (prev === item.id ? null : item.id))}
-                          >
-                            <div>
-                              <h4>{item.title}</h4>
-                              <p>{item.summary}</p>
-                            </div>
-                            <span>{expanded ? '收起' : '展开'}</span>
-                          </button>
-                          {expanded ? (
-                            <div className="lobster-news-detail">
-                              <div style={{ fontSize: '11px', color: '#888', marginBottom: '8px' }}>{item.date} · {item.source}</div>
-                              {item.url ? (
-                                <a href={item.url} target="_blank" rel="noreferrer" style={{ color: '#667eea', fontSize: '13px' }}>
-                                  查看原文 →
-                                </a>
-                              ) : null}
-                            </div>
-                          ) : null}
-                        </article>
-                      );
-                    })}
-                  </div>
-                ) : null}
-              </>
-            )}
-
-            {/* 搜索结果 */}
-            {newsSubTab === 'search' && (
-              <>
-                <div style={{ marginBottom: '16px', padding: '12px', background: 'rgba(102,126,234,0.2)', borderRadius: '8px' }}>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && void handleSearch()}
-                      placeholder="输入关键词搜索..."
-                      style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '1px solid #667eea', background: 'rgba(255,255,255,0.1)', color: 'white', fontSize: '14px' }}
-                    />
-                    <button type="button" onClick={() => void handleSearch()} disabled={searchLoading} className="milestone-btn" style={{ whiteSpace: 'nowrap' }}>
-                      {searchLoading ? '搜索中...' : '🔍'}
-                    </button>
-                  </div>
-                </div>
-                
-                {searchLoading ? (
-                  <p className="lobster-news-empty">搜索中...</p>
-                ) : searchResults && searchResults.length > 0 ? (
-                  <div style={{ maxHeight: '500px', overflow: 'auto' }}>
-                    {searchResults.map((item: any) => (
-                      <div key={item.id} style={{ padding: '12px', marginBottom: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', borderLeft: '3px solid #667eea' }}>
-                        <div style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '6px', lineHeight: '1.4' }}>{item.title}</div>
-                        <div style={{ fontSize: '13px', color: '#aaa', marginBottom: '6px', lineHeight: '1.4' }}>{item.summary}</div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '11px', color: '#888' }}>{item.source} · {item.date}</span>
-                          {item.url ? (
-                            <a href={item.url} target="_blank" rel="noreferrer" style={{ color: '#667eea', fontSize: '12px' }}>
-                              查看 →
-                            </a>
-                          ) : (
-                            <span style={{ fontSize: '11px', color: '#666' }}>无链接</span>
-                          )}
+            {!newsLoading && news.length > 0 ? (
+              <div className="lobster-news-list">
+                {news.map((item) => {
+                  const expanded = expandedNewsId === item.id;
+                  return (
+                    <article key={item.id} className={`lobster-news-card ${expanded ? 'expanded' : ''}`}>
+                      <button
+                        type="button"
+                        className="lobster-news-trigger"
+                        onClick={() => setExpandedNewsId((prev) => (prev === item.id ? null : item.id))}
+                      >
+                        <div>
+                          <h4>{item.title}</h4>
+                          <p>{item.summary}</p>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="lobster-news-empty">输入关键词搜索 OpenClaw 资讯</p>
-                )}
-              </>
-            )}
+                        <span>{expanded ? '收起' : '展开'}</span>
+                      </button>
+                      {expanded ? (
+                        <div className="lobster-news-detail">
+                          <p>{item.content}</p>
+                          <div className="lobster-news-meta">
+                            <span>{new Date(item.publishedAt).toLocaleString('zh-CN')}</span>
+                            <span>来源：{item.source}</span>
+                            {item.url ? (
+                              <a href={item.url} target="_blank" rel="noreferrer">
+                                查看原文
+                              </a>
+                            ) : null}
+                          </div>
+                        </div>
+                      ) : null}
+                    </article>
+                  );
+                })}
+              </div>
+            ) : null}
           </section>
         </>
       ) : null}
-      {/* 成长里程碑模态框 */}
-      {showMilestoneModal ? (
+      {showAchievementModal ? (
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="成长记录弹窗"
-          onClick={() => setShowMilestoneModal(false)}
+          aria-label="成就弹窗"
+          onClick={() => setShowAchievementModal(false)}
           style={{
             position: 'fixed',
             inset: 0,
@@ -784,10 +692,10 @@ export default function LobsterPage() {
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <h3 style={{ margin: 0 }}>🎯 成长之路</h3>
+              <h3 style={{ margin: 0 }}>🏆 成就</h3>
               <button
                 type="button"
-                onClick={() => setShowMilestoneModal(false)}
+                onClick={() => setShowAchievementModal(false)}
                 style={{
                   padding: '8px 12px',
                   borderRadius: '8px',
@@ -801,56 +709,34 @@ export default function LobsterPage() {
               </button>
             </div>
 
-            {/* 主动关怀 */}
-            {careMessage && (
-              <div
-                style={{
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(139, 92, 246, 0.2))',
-                  border: '1px solid rgba(139, 92, 246, 0.4)',
-                  marginBottom: '16px',
-                }}
-              >
-                <span style={{ fontSize: '20px' }}>💬 </span>
-                <span>{careMessage}</span>
-              </div>
-            )}
+            {achievementsLoading ? <p style={{ margin: 0 }}>成就加载中...</p> : null}
+            {achievementsError ? <p style={{ margin: 0, color: '#ff9f9f' }}>加载失败：{achievementsError}</p> : null}
+            {!achievementsLoading && !achievementsError && achievements.length === 0 ? <p style={{ margin: 0 }}>暂无已解锁成就</p> : null}
 
-            {milestonesLoading ? <p style={{ margin: 0 }}>成长记录加载中...</p> : null}
-            {!milestonesLoading && milestones.length === 0 ? <p style={{ margin: 0 }}>暂无成长记录</p> : null}
-
-            {!milestonesLoading && milestones.length > 0 ? (
+            {!achievementsLoading && !achievementsError && achievements.length > 0 ? (
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
                   gap: '12px',
                 }}
               >
-                {milestones.map((milestone) => (
+                {achievements.map((achievement) => (
                   <article
-                    key={milestone.id}
+                    key={achievement.id}
                     style={{
                       padding: '12px',
                       borderRadius: '12px',
-                      background: milestone.unlocked 
-                        ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.15))'
-                        : 'rgba(255,255,255,0.05)',
-                      border: `1px solid ${milestone.unlocked ? 'rgba(34, 197, 94, 0.5)' : 'rgba(255,255,255,0.1)'}`,
-                      opacity: milestone.unlocked ? 1 : 0.5,
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255,255,255,0.16)',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '24px' }}>{milestone.icon || '🎯'}</span>
-                      <strong>{milestone.name}</strong>
+                      <span style={{ fontSize: '24px' }}>{achievement.icon || '🏅'}</span>
+                      <strong>{achievement.name}</strong>
                     </div>
-                    <p style={{ margin: '0 0 8px 0', opacity: 0.92, fontSize: '14px' }}>{milestone.description || '暂无描述'}</p>
-                    {milestone.unlocked && milestone.unlockedAt ? (
-                      <p style={{ margin: 0, fontSize: '12px', color: '#4ade80' }}>✓ 已解锁</p>
-                    ) : (
-                      <p style={{ margin: 0, fontSize: '12px', opacity: 0.6 }}>未解锁</p>
-                    )}
+                    <p style={{ margin: '0 0 8px 0', opacity: 0.92 }}>{achievement.description || '暂无描述'}</p>
+                    <p style={{ margin: 0, fontSize: '12px', opacity: 0.75 }}>解锁时间：{formatUnlockTime(achievement)}</p>
                   </article>
                 ))}
               </div>
