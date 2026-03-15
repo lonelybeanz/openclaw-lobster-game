@@ -16,6 +16,13 @@ export interface LobsterState {
   lastInteraction: string;
   totalInteractions: number;
   achievements: string[];
+  // 成长里程碑字段
+  consecutiveDays: number;
+  lastActiveDate: string;
+  firstMeet?: string;
+  midnightCount: number;
+  deepTalkCount: number;
+  challengesCompleted: number;
   lastFed?: string;
   lastTrained?: string;
   lastRested?: string;
@@ -31,7 +38,14 @@ const defaultState: LobsterState = {
   loyalty: 50,
   lastInteraction: new Date().toISOString(),
   totalInteractions: 0,
-  achievements: []
+  achievements: [],
+  // 成长里程碑默认值
+  consecutiveDays: 1,
+  lastActiveDate: new Date().toISOString().split('T')[0],
+  firstMeet: new Date().toISOString(),
+  midnightCount: 0,
+  deepTalkCount: 0,
+  challengesCompleted: 0
 };
 
 let stateWriteQueue: Promise<void> = Promise.resolve();

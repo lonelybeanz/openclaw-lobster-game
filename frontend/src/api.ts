@@ -44,3 +44,29 @@ export async function getAchievements(): Promise<any[]> {
 export async function getTokenStats(): Promise<any> {
   return request('/lobster/tokens');
 }
+
+// 成长里程碑
+export async function getMilestones(): Promise<any> {
+  return request('/lobster/milestones');
+}
+
+// 主动关怀
+export async function getCareMessage(): Promise<{ message: string | null }> {
+  return request('/lobster/care');
+}
+
+// 深度对话 - 与 OpenClaw 互动
+export async function deepTalk(message: string): Promise<any> {
+  return request('/lobster/deeptalk', {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  });
+}
+
+// 搜索资讯 - 使用 OpenClaw 获取网上最新资讯
+export async function searchNews(query: string): Promise<any> {
+  return request('/lobster/search-news', {
+    method: 'POST',
+    body: JSON.stringify({ query }),
+  });
+}

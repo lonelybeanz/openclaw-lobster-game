@@ -11,6 +11,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/admin-api/, ''),
       },
+      '^/lobster.*': {
+        target: 'http://localhost:13000',
+        changeOrigin: true,
+        rewrite: (path) => path,
+      },
     },
   },
 });

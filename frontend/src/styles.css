@@ -657,3 +657,73 @@ body {
 .lobster-tab:hover:not(.active) {
   background: rgba(255,255,255,0.1);
 }
+
+.milestone-row {
+  display: flex;
+  gap: 8px;
+}
+
+.milestone-btn {
+  flex: 1;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.milestone-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(6, 182, 212, 0.2);
+}
+
+.milestone-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.source-tip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.1);
+  color: #dbeafe;
+  font-size: 10px;
+  cursor: help;
+  line-height: 1;
+}
+
+.source-tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  min-width: 150px;
+  max-width: 240px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(8, 13, 24, 0.95);
+  color: #f8fafc;
+  font-size: 11px;
+  white-space: normal;
+  line-height: 1.4;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s ease;
+  z-index: 30;
+}
+
+.source-tip:hover::after {
+  opacity: 1;
+}
