@@ -225,11 +225,11 @@ export default function LobsterPage() {
     intelligenceScore * 0.25 + perceptionScore * 0.2 + memoryScore * 0.2 + reactionScore * 0.2 + growthScore * 0.15;
 
   const majorMetrics = [
-    { key: 'intelligence', label: '智力', value: intelligenceScore, formula: '智力 = cerebral×0.3 + neurons×0.2 + (推理得分/100)×0.5' },
-    { key: 'perception', label: '感知', value: perceptionScore, formula: '感知 = opticLobes×0.4 + antennaLobe×0.3 + (视觉得分/100)×0.3' },
-    { key: 'memory', label: '记忆力', value: memoryScore, formula: '记忆力 = shortTerm×0.3 + longTerm×0.3 + (上下文长度/10000)×0.4' },
-    { key: 'reaction', label: '反应', value: reactionScore, formula: '反应 = (输出速度/200)×100' },
-    { key: 'growth', label: '成长值', value: growthScore, formula: '效率 = 100 - (价格×5)' },
+    { key: 'intelligence', label: '智力', value: intelligenceScore, formula: '脑神经×0.3 + 神经元×0.2 + 推理×0.5', rule: '影响学习速度和问题解决能力' },
+    { key: 'perception', label: '感知', value: perceptionScore, formula: '视叶×0.35 + 触角叶×0.35 + 触角×0.15 + 脑干×0.15', rule: '影响信息采集和环境感知能力' },
+    { key: 'memory', label: '记忆力', value: memoryScore, formula: '短期×0.2 + 长期×0.3 + 情景×0.2 + 程序×0.2', rule: '影响记忆存储和检索能力' },
+    { key: 'reaction', label: '反应', value: reactionScore, formula: '小脑×0.3 + 脑干×0.25 + 敏捷×0.25 + 杏仁核×0.2', rule: '影响行动响应速度' },
+    { key: 'growth', label: '成长值', value: growthScore, formula: 'EXP进度×0.35 + 等级×0.25 + 耐力×0.2 + 心情×0.1', rule: '影响进化速度和上限' },
   ] as const;
 
   return (
@@ -371,31 +371,30 @@ export default function LobsterPage() {
               </article>
               {majorMetrics.map((metric) => (
                 <article key={metric.key} className="kpi-card gradient-card-soft">
-                  <p style={{ margin: 0 }}>{metric.label}</p>
-                  <div style={{ position: 'relative', display: 'inline-block' }}>
-                    <h2 style={{ margin: 0 }}>{metric.value.toFixed(1)}</h2>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <p style={{ margin: 0, fontSize: '13px', opacity: 0.85 }}>{metric.label}</p>
                     <span
-                      title={metric.formula}
-                      aria-label={`${metric.label}计算公式：${metric.formula}`}
+                      data-formula={metric.formula}
+                      data-rule={metric.rule}
+                      className="metric-tooltip"
                       style={{
-                        position: 'absolute',
-                        top: '-8px',
-                        right: '-8px',
-                        width: '20px',
-                        height: '20px',
+                        width: '18px',
+                        height: '18px',
                         borderRadius: '50%',
-                        background: 'rgba(102,126,234,0.9)',
+                        background: 'rgba(102,126,234,0.7)',
                         color: 'white',
-                        fontSize: '12px',
-                        lineHeight: '20px',
+                        fontSize: '11px',
+                        lineHeight: '18px',
                         textAlign: 'center',
                         cursor: 'help',
                         userSelect: 'none',
+                        display: 'inline-block',
                       }}
                     >
-                      i
+                      ?
                     </span>
                   </div>
+                  <h2 style={{ margin: 0, fontSize: '28px' }}>{metric.value.toFixed(1)}</h2>
                 </article>
               ))}
             </div>
