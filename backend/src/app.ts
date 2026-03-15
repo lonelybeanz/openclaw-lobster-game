@@ -8,6 +8,7 @@ import { initModelBenchmarkUpdater } from './services/modelBenchmark';
 import { getMilestones, generateCareMessage, enhanceMilestones } from './services/milestones';
 import { checkOpenClawStatus, chatWithLobster } from './services/openclaw';
 import { createTtlCache } from './services/cache';
+import { getPromptStats } from './services/promptStats';
 
 const app = new Hono();
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -100,6 +101,13 @@ app.get('/lobster/tokens', async (c) => {
   return c.json({ code: 0, data: stats });
 });
 
+// Prompt 查询统计
+app.get('/lobster/prompt', async (c) => {
+  const stats = await getPromptStats();
+  return c.json({ code: 0, data: stats });
+});
+
+// 互动接口 - 喂食/训练/休息
 app.post('/lobster/interact', async (c) => {
   const { action } = await c.req.json();
 
