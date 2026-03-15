@@ -98,6 +98,10 @@ export default function LobsterPage() {
   const [searchQuery, setSearchQuery] = useState('OpenClaw 最新版本 新功能 教程');
   const [searchResults, setSearchResults] = useState<any[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [showAchievementModal, setShowAchievementModal] = useState(false);
+  const [achievements, setAchievements] = useState<AchievementItem[]>([]);
+  const [achievementsLoading, setAchievementsLoading] = useState(false);
+  const [achievementsError, setAchievementsError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [randomEventPrompt, setRandomEventPrompt] = useState<RandomEvent | null>(null);
 
@@ -290,11 +294,11 @@ export default function LobsterPage() {
     intelligenceScore * 0.25 + perceptionScore * 0.2 + memoryScore * 0.2 + reactionScore * 0.2 + growthScore * 0.15;
 
   const majorMetrics = [
-    { key: 'intelligence', label: '智力', value: intelligenceScore, formula: '智力 = 脑神经/神经元/推理得分 + Benchmark intelligence_index' },
-    { key: 'perception', label: '感知', value: perceptionScore, formula: '感知 = 视叶/触角叶/触角 + Benchmark context score' },
-    { key: 'memory', label: '记忆力', value: memoryScore, formula: '记忆力 = 短期/长期/情景/程序记忆 + Benchmark context score' },
-    { key: 'reaction', label: '反应', value: reactionScore, formula: '反应 = 小脑/脑干/敏捷 + Benchmark speed/latency score' },
-    { key: 'growth', label: '成长值', value: growthScore, formula: '成长值 = 经验/等级/耐力 + Benchmark cost score' },
+    { key: 'intelligence', label: '智力', value: intelligenceScore, formula: '脑神经×0.3 + 神经元×0.2 + 推理×0.5', rule: '影响学习速度和问题解决能力' },
+    { key: 'perception', label: '感知', value: perceptionScore, formula: '视叶×0.35 + 触角叶×0.35 + 触角×0.15 + 脑干×0.15', rule: '影响信息采集和环境感知能力' },
+    { key: 'memory', label: '记忆力', value: memoryScore, formula: '短期×0.2 + 长期×0.3 + 情景×0.2 + 程序×0.2', rule: '影响记忆存储和检索能力' },
+    { key: 'reaction', label: '反应', value: reactionScore, formula: '小脑×0.3 + 脑干×0.25 + 敏捷×0.25 + 杏仁核×0.2', rule: '影响行动响应速度' },
+    { key: 'growth', label: '成长值', value: growthScore, formula: 'EXP进度×0.35 + 等级×0.25 + 耐力×0.2 + 心情×0.1', rule: '影响进化速度和上限' },
   ] as const;
 
   return (
@@ -317,30 +321,10 @@ export default function LobsterPage() {
       </header>
       <div style={{display:"flex", gap:"8px", marginBottom:"15px", padding:"0 20px"}}>
         <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="status"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("status")}>📊状态</button>
-        <div style={{display:"flex", flex:1, gap:"6px", alignItems:"center"}}>
-          <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="evolution"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("evolution")}>🧬进化</button>
-          <button
-            type="button"
-            aria-label="查看进化计算公式"
-            style={{padding:"10px 12px", border:"1px solid rgba(255,255,255,0.2)", borderRadius:"8px", background:showFormulaGuide?"rgba(102,126,234,0.5)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}}
-            onClick={() => setShowFormulaGuide((prev) => !prev)}
-          >
-            ？
-          </button>
-        </div>
+        <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="evolution"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("evolution")}>🧬进化</button>
         <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="memory"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("memory")}>💾记忆</button>
         <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="news"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("news")}>📰资讯</button>
       </div>
-      {showFormulaGuide ? (
-        <section
-          className="panel glass-card"
-          style={{ margin: '0 20px 15px', padding: '12px 14px', border: '1px dashed rgba(255,255,255,0.3)' }}
-        >
-          <h4 style={{ margin: '0 0 8px 0' }}>进化计算公式说明</h4>
-          <p style={{ margin: '0 0 6px 0' }}>综合进化得分 = 智力×0.25 + 感知×0.2 + 记忆力×0.2 + 反应×0.2 + 成长值×0.15</p>
-          <p style={{ margin: 0, opacity: 0.85 }}>提示：点击下方每个主要属性右侧的小气泡可查看该属性的详细公式。</p>
-        </section>
-      ) : null}
       {error ? <div className="panel error glass-card">数据加载失败：{error}</div> : null}
       {loading && !stats ? <div className="panel glass-card">正在加载龙虾状态...</div> : null}
       {newsError ? <div className="panel error glass-card">资讯加载失败：{newsError}</div> : null}
@@ -451,53 +435,30 @@ export default function LobsterPage() {
               </article>
               {majorMetrics.map((metric) => (
                 <article key={metric.key} className="kpi-card gradient-card-soft">
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                    <p style={{ margin: 0 }}>{metric.label}</p>
-                    <div style={{ position: 'relative' }}>
-                      <button
-                        type="button"
-                        aria-label={`查看${metric.label}计算公式`}
-                        style={{
-                          minWidth: '40px',
-                          height: '24px',
-                          borderRadius: '999px',
-                          border: '1px solid rgba(255,255,255,0.25)',
-                          background: activeFormula === metric.key ? 'rgba(102,126,234,0.55)' : 'rgba(255,255,255,0.12)',
-                          color: 'white',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          lineHeight: 1,
-                          padding: '0 8px',
-                        }}
-                        onClick={() => setActiveFormula((prev) => (prev === metric.key ? null : metric.key))}
-                      >
-                        【？】
-                      </button>
-                      {activeFormula === metric.key ? (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            top: '30px',
-                            right: 0,
-                            zIndex: 10,
-                            minWidth: '220px',
-                            maxWidth: '300px',
-                            padding: '8px 10px',
-                            borderRadius: '8px',
-                            border: '1px solid rgba(255,255,255,0.2)',
-                            background: 'rgba(10,12,22,0.94)',
-                            color: 'white',
-                            fontSize: '12px',
-                            lineHeight: 1.45,
-                            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.28)',
-                          }}
-                        >
-                          {metric.formula}
-                        </div>
-                      ) : null}
-                    </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <p style={{ margin: 0, fontSize: '13px', opacity: 0.85 }}>{metric.label}</p>
+                    <span
+                      data-formula={metric.formula}
+                      data-rule={metric.rule}
+                      className="metric-tooltip"
+                      style={{
+                        width: '18px',
+                        height: '18px',
+                        borderRadius: '50%',
+                        background: 'rgba(102,126,234,0.7)',
+                        color: 'white',
+                        fontSize: '11px',
+                        lineHeight: '18px',
+                        textAlign: 'center',
+                        cursor: 'help',
+                        userSelect: 'none',
+                        display: 'inline-block',
+                      }}
+                    >
+                      ?
+                    </span>
                   </div>
-                  <h2>{metric.value.toFixed(1)}</h2>
+                  <h2 style={{ margin: 0, fontSize: '28px' }}>{metric.value.toFixed(1)}</h2>
                 </article>
               ))}
             </div>
