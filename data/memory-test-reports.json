@@ -1,0 +1,548 @@
+[
+  {
+    "runAt": "2026-03-16T12:07:21.375Z",
+    "durationMs": 79537,
+    "totalCases": 4,
+    "passedCases": 0,
+    "accuracyRate": 0,
+    "averageLatencyMs": 19884,
+    "results": [
+      {
+        "id": "dev-token",
+        "agentId": "dev",
+        "query": "Token 节省",
+        "latencyMs": 13651,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "dev-framework",
+        "agentId": "dev",
+        "query": "高阶框架",
+        "latencyMs": 9231,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "main-memory",
+        "agentId": "main",
+        "query": "记忆",
+        "latencyMs": 30023,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "timeout"
+      },
+      {
+        "id": "pm-project",
+        "agentId": "pm",
+        "query": "项目",
+        "latencyMs": 26632,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      }
+    ]
+  },
+  {
+    "runAt": "2026-03-16T12:08:42.209Z",
+    "durationMs": 39623,
+    "totalCases": 4,
+    "passedCases": 0,
+    "accuracyRate": 0,
+    "averageLatencyMs": 9906,
+    "results": [
+      {
+        "id": "dev-token",
+        "agentId": "dev",
+        "query": "Token 节省",
+        "latencyMs": 8206,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "dev-framework",
+        "agentId": "dev",
+        "query": "高阶框架",
+        "latencyMs": 5497,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "main-memory",
+        "agentId": "main",
+        "query": "记忆",
+        "latencyMs": 19417,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "pm-project",
+        "agentId": "pm",
+        "query": "项目",
+        "latencyMs": 6502,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      }
+    ]
+  },
+  {
+    "runAt": "2026-03-16T16:54:52.451Z",
+    "durationMs": 44783,
+    "totalCases": 4,
+    "passedCases": 0,
+    "accuracyRate": 0,
+    "averageLatencyMs": 11196,
+    "results": [
+      {
+        "id": "dev-token",
+        "agentId": "dev",
+        "query": "Token 节省",
+        "latencyMs": 10055,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "dev-framework",
+        "agentId": "dev",
+        "query": "高阶框架",
+        "latencyMs": 7885,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "main-memory",
+        "agentId": "main",
+        "query": "记忆",
+        "latencyMs": 20361,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "pm-project",
+        "agentId": "pm",
+        "query": "项目",
+        "latencyMs": 6482,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      }
+    ]
+  },
+  {
+    "runAt": "2026-03-16T19:54:53.007Z",
+    "durationMs": 45216,
+    "totalCases": 4,
+    "passedCases": 0,
+    "accuracyRate": 0,
+    "averageLatencyMs": 11304,
+    "results": [
+      {
+        "id": "dev-token",
+        "agentId": "dev",
+        "query": "Token 节省",
+        "latencyMs": 10203,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "dev-framework",
+        "agentId": "dev",
+        "query": "高阶框架",
+        "latencyMs": 8341,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "main-memory",
+        "agentId": "main",
+        "query": "记忆",
+        "latencyMs": 20162,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "pm-project",
+        "agentId": "pm",
+        "query": "项目",
+        "latencyMs": 6509,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      }
+    ]
+  },
+  {
+    "runAt": "2026-03-16T22:54:53.422Z",
+    "durationMs": 45610,
+    "totalCases": 4,
+    "passedCases": 0,
+    "accuracyRate": 0,
+    "averageLatencyMs": 11403,
+    "results": [
+      {
+        "id": "dev-token",
+        "agentId": "dev",
+        "query": "Token 节省",
+        "latencyMs": 10725,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "dev-framework",
+        "agentId": "dev",
+        "query": "高阶框架",
+        "latencyMs": 8280,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "main-memory",
+        "agentId": "main",
+        "query": "记忆",
+        "latencyMs": 19984,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "pm-project",
+        "agentId": "pm",
+        "query": "项目",
+        "latencyMs": 6621,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      }
+    ]
+  },
+  {
+    "runAt": "2026-03-17T01:54:55.474Z",
+    "durationMs": 47631,
+    "totalCases": 4,
+    "passedCases": 0,
+    "accuracyRate": 0,
+    "averageLatencyMs": 11908,
+    "results": [
+      {
+        "id": "dev-token",
+        "agentId": "dev",
+        "query": "Token 节省",
+        "latencyMs": 10624,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "dev-framework",
+        "agentId": "dev",
+        "query": "高阶框架",
+        "latencyMs": 8581,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "main-memory",
+        "agentId": "main",
+        "query": "记忆",
+        "latencyMs": 21446,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "pm-project",
+        "agentId": "pm",
+        "query": "项目",
+        "latencyMs": 6979,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      }
+    ]
+  },
+  {
+    "runAt": "2026-03-17T04:03:50.616Z",
+    "durationMs": 45907,
+    "totalCases": 4,
+    "passedCases": 0,
+    "accuracyRate": 0,
+    "averageLatencyMs": 11477,
+    "results": [
+      {
+        "id": "dev-token",
+        "agentId": "dev",
+        "query": "Token 节省",
+        "latencyMs": 10910,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "dev-framework",
+        "agentId": "dev",
+        "query": "高阶框架",
+        "latencyMs": 8049,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "main-memory",
+        "agentId": "main",
+        "query": "记忆",
+        "latencyMs": 20018,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "pm-project",
+        "agentId": "pm",
+        "query": "项目",
+        "latencyMs": 6930,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      }
+    ]
+  },
+  {
+    "runAt": "2026-03-17T04:54:57.677Z",
+    "durationMs": 49728,
+    "totalCases": 4,
+    "passedCases": 0,
+    "accuracyRate": 0,
+    "averageLatencyMs": 12432,
+    "results": [
+      {
+        "id": "dev-token",
+        "agentId": "dev",
+        "query": "Token 节省",
+        "latencyMs": 12133,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "dev-framework",
+        "agentId": "dev",
+        "query": "高阶框架",
+        "latencyMs": 8747,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "main-memory",
+        "agentId": "main",
+        "query": "记忆",
+        "latencyMs": 22128,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "pm-project",
+        "agentId": "pm",
+        "query": "项目",
+        "latencyMs": 6720,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      }
+    ]
+  },
+  {
+    "runAt": "2026-03-17T07:03:59.105Z",
+    "durationMs": 53928,
+    "totalCases": 4,
+    "passedCases": 0,
+    "accuracyRate": 0,
+    "averageLatencyMs": 13482,
+    "results": [
+      {
+        "id": "dev-token",
+        "agentId": "dev",
+        "query": "Token 节省",
+        "latencyMs": 13854,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "dev-framework",
+        "agentId": "dev",
+        "query": "高阶框架",
+        "latencyMs": 9303,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "main-memory",
+        "agentId": "main",
+        "query": "记忆",
+        "latencyMs": 22377,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "pm-project",
+        "agentId": "pm",
+        "query": "项目",
+        "latencyMs": 8394,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      }
+    ]
+  },
+  {
+    "runAt": "2026-03-17T07:54:56.486Z",
+    "durationMs": 48372,
+    "totalCases": 4,
+    "passedCases": 0,
+    "accuracyRate": 0,
+    "averageLatencyMs": 12093,
+    "results": [
+      {
+        "id": "dev-token",
+        "agentId": "dev",
+        "query": "Token 节省",
+        "latencyMs": 13684,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "dev-framework",
+        "agentId": "dev",
+        "query": "高阶框架",
+        "latencyMs": 8059,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "main-memory",
+        "agentId": "main",
+        "query": "记忆",
+        "latencyMs": 20084,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      },
+      {
+        "id": "pm-project",
+        "agentId": "pm",
+        "query": "项目",
+        "latencyMs": 6544,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "error": "no results"
+      }
+    ]
+  },
+  {
+    "runAt": "2026-03-18T04:42:17.491Z",
+    "durationMs": 33223,
+    "totalCases": 3,
+    "passedCases": 0,
+    "accuracyRate": 0,
+    "averageLatencyMs": 11074,
+    "results": [
+      {
+        "id": "dev-memory",
+        "agentId": "dev",
+        "query": "memory",
+        "latencyMs": 14659,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "evaluationMethod": "llm",
+        "evaluationReason": "no results",
+        "error": "no results"
+      },
+      {
+        "id": "dev-task",
+        "agentId": "dev",
+        "query": "task",
+        "latencyMs": 9621,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "evaluationMethod": "llm",
+        "evaluationReason": "no results",
+        "error": "no results"
+      },
+      {
+        "id": "dev-config",
+        "agentId": "dev",
+        "query": "config",
+        "latencyMs": 8943,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "evaluationMethod": "llm",
+        "evaluationReason": "no results",
+        "error": "no results"
+      }
+    ]
+  }
+]

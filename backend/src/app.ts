@@ -9,10 +9,14 @@ import { getMilestones, generateCareMessage, enhanceMilestones } from './service
 import { checkOpenClawStatus, chatWithLobster } from './services/openclaw';
 import { createTtlCache } from './services/cache';
 import { getPromptStats } from './services/promptStats';
+import { getMemoryScore } from './services/memoryScore';
+import { getMemoryLlmEval } from './services/memoryLlmEval';
+import { getLatestMemoryLlmEvalResult, saveMemoryLlmEvalResult } from './services/memoryLlmEvalPersistence';
 
 const app = new Hono();
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const STATS_CACHE_TTL_MS = 20 * 1000;
+const SKILLS_CACHE_TTL_MS = 20 * 1000;
 const NEWS_CACHE_TTL_MS = 60 * 1000;
 const MILESTONES_CACHE_TTL_MS = 30 * 1000;
 const CARE_CACHE_TTL_MS = 30 * 1000;
@@ -30,6 +34,7 @@ type StatsResponseData = Awaited<ReturnType<typeof getCompleteLobsterStats>> & {
 
 const achievementsCache = createTtlCache<{ id: string; name: string; unlocked: boolean }[]>(CACHE_TTL_MS);
 const statsCache = createTtlCache<StatsResponseData>(STATS_CACHE_TTL_MS);
+const skillsCache = createTtlCache<Awaited<ReturnType<typeof getCompleteLobsterStats>>['skillsAnalysis']>(SKILLS_CACHE_TTL_MS);
 const newsCache = createTtlCache<Awaited<ReturnType<typeof getOpenClawNews>>>(NEWS_CACHE_TTL_MS);
 const milestonesCache = createTtlCache<Awaited<ReturnType<typeof getMilestones>>>(MILESTONES_CACHE_TTL_MS);
 const careMessageCache = createTtlCache<{ message: string | null }>(CARE_CACHE_TTL_MS);
@@ -76,6 +81,15 @@ app.get('/lobster/stats', async (c) => {
       experiencePool: stats.experiencePool + lobsterState.experience,
       totalInteractions: lobsterState.totalInteractions,
     };
+  });
+
+  return c.json({ code: 0, data });
+});
+
+app.get('/lobster/skills', async (c) => {
+  const data = await skillsCache.get(async () => {
+    const stats = await getCompleteLobsterStats();
+    return stats.skillsAnalysis;
   });
 
   return c.json({ code: 0, data });
@@ -183,6 +197,31 @@ app.get('/lobster/care', async (c) => {
     };
     return { message: generateCareMessage(mergedStats) };
   });
+  return c.json({ code: 0, data });
+});
+
+app.get('/lobster/memory-score', async (c) => {
+  const data = await getMemoryScore();
+  return c.json({ code: 0, data });
+});
+
+app.get('/lobster/memory-llm-eval', async (c) => {
+  const data = await getMemoryLlmEval();
+  return c.json({ code: 0, data });
+});
+
+app.get('/lobster/memory-llm-eval/latest', async (c) => {
+  const data = await getLatestMemoryLlmEvalResult();
+  return c.json({ code: 0, data });
+});
+
+app.post('/lobster/memory-llm-eval/save', async (c) => {
+  const { result } = await c.req.json().catch(() => ({ result: null }));
+  if (!result || typeof result !== 'object') {
+    return c.json({ code: 1, message: '缺少评分结果' }, 400);
+  }
+
+  const data = await saveMemoryLlmEvalResult(result);
   return c.json({ code: 0, data });
 });
 

@@ -726,6 +726,8 @@ body {
 
 .source-tip:hover::after {
   opacity: 1;
+}
+
 /* 进化指标气泡提示 */
 .metric-tooltip {
   position: relative;
@@ -759,4 +761,610 @@ body {
 .metric-tooltip:hover::before {
   opacity: 1;
   visibility: visible;
+}
+
+.memory-overview {
+  display: grid;
+  grid-template-columns: minmax(300px, 1.15fr) minmax(320px, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.memory-overview-hero {
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top right, rgba(34, 197, 94, 0.22), transparent 30%),
+    radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.22), transparent 28%),
+    linear-gradient(160deg, rgba(8, 47, 73, 0.76), rgba(15, 23, 42, 0.84));
+}
+
+.memory-overview-badge {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 16px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(186, 230, 253, 0.28);
+  background: rgba(125, 211, 252, 0.08);
+  color: #bae6fd;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.memory-overview-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.memory-overview-head h3 {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.memory-overview-head p,
+.memory-overview-footer,
+.memory-overview-highlights span,
+.memory-metric-card span {
+  color: var(--text-soft);
+}
+
+.memory-overview-score {
+  min-width: 132px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.36);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  text-align: right;
+}
+
+.memory-overview-score span {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 8px;
+  color: #93c5fd;
+}
+
+.memory-overview-score strong {
+  font-size: 38px;
+  line-height: 1;
+}
+
+.memory-overview-highlights {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.memory-overview-highlights div {
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.memory-overview-highlights span,
+.memory-overview-footer span {
+  display: block;
+  font-size: 12px;
+}
+
+.memory-overview-highlights strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 24px;
+}
+
+.memory-overview-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 16px;
+  font-size: 12px;
+}
+
+.memory-overview-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.memory-metric-card {
+  min-height: 154px;
+}
+
+.memory-metric-card p {
+  color: #dbeafe;
+}
+
+.memory-score-layout {
+  display: grid;
+  gap: 16px;
+}
+
+.memory-ai-eval-section {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.memory-ai-eval-hero {
+  background:
+    radial-gradient(circle at top right, rgba(96, 165, 250, 0.16), transparent 26%),
+    radial-gradient(circle at left center, rgba(45, 212, 191, 0.12), transparent 24%),
+    linear-gradient(150deg, rgba(15, 23, 42, 0.86), rgba(10, 40, 58, 0.76));
+}
+
+.memory-ai-eval-status {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(191, 219, 254, 0.16);
+  background: rgba(255, 255, 255, 0.05);
+  color: #dbeafe;
+  line-height: 1.6;
+}
+
+.memory-ai-eval-status.loading {
+  color: #fde68a;
+  border-color: rgba(253, 230, 138, 0.28);
+  background: rgba(250, 204, 21, 0.08);
+}
+
+.memory-ai-eval-status.error {
+  color: #fecaca;
+  border-color: rgba(252, 165, 165, 0.28);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.memory-ai-eval-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.memory-ai-eval-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.memory-ai-eval-card {
+  display: grid;
+  gap: 12px;
+}
+
+.memory-ai-score-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.memory-ai-score-wrap strong {
+  font-size: 34px;
+  line-height: 1;
+}
+
+.memory-ai-score-wrap span {
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.memory-ai-summary {
+  margin: 0;
+  color: #e2e8f0;
+  line-height: 1.7;
+}
+
+.memory-ai-points {
+  display: grid;
+  gap: 8px;
+}
+
+.memory-ai-points label {
+  font-size: 12px;
+  color: #bfdbfe;
+}
+
+.memory-insight-grid,
+.memory-analysis-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: 16px;
+}
+
+.memory-score-hero {
+  padding: 22px;
+  background:
+    radial-gradient(circle at top right, rgba(250, 204, 21, 0.18), transparent 28%),
+    linear-gradient(145deg, rgba(34, 197, 94, 0.24), rgba(14, 165, 233, 0.24), rgba(15, 23, 42, 0.2));
+}
+
+.memory-score-hero p,
+.memory-chart-panel p,
+.memory-agent-card p,
+.memory-report-panel p,
+.memory-brief-card p,
+.memory-layer-panel p {
+  color: var(--text-soft);
+}
+
+.multi-memory-header-right {
+  max-width: 460px;
+  align-items: flex-start;
+}
+
+.multi-memory-workspace {
+  width: 100%;
+  word-break: break-word;
+}
+
+.multi-memory-header-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  margin-bottom: 14px;
+}
+
+.multi-memory-header-tags .memory-layer-pill-row {
+  margin-top: 0;
+}
+
+.multi-memory-kpi-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.multi-memory-kpi-card {
+  min-width: 0;
+}
+
+.multi-memory-kpi-card p {
+  margin-top: 8px;
+}
+
+.multi-memory-kpi-value {
+  font-size: clamp(28px, 4vw, 34px);
+  line-height: 1.1;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+.multi-memory-kpi-value-lg {
+  font-size: clamp(36px, 5vw, 48px);
+}
+
+.multi-memory-tab-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.multi-memory-tab-row button strong {
+  font-size: 14px;
+}
+
+.multi-memory-tab-row button span {
+  font-size: 11px;
+  color: #dbeafe;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.multi-memory-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+  gap: 16px;
+}
+
+.multi-memory-file-row {
+  align-items: flex-start;
+}
+
+.multi-memory-meta-row {
+  margin-top: 0;
+  justify-content: flex-end;
+}
+
+.multi-memory-agents-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.multi-memory-agent-tab {
+  text-align: left;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #f8fafc;
+  cursor: pointer;
+  transition: transform 0.22s ease, border-color 0.22s ease, background 0.22s ease, box-shadow 0.22s ease;
+}
+
+.multi-memory-agent-tab:hover {
+  transform: translateY(-2px);
+  border-color: rgba(125, 211, 252, 0.28);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.2);
+}
+
+.multi-memory-agent-tab.active {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.24), rgba(167, 139, 250, 0.18));
+  border-color: rgba(125, 211, 252, 0.3);
+}
+
+.multi-memory-agent-tab-head,
+.multi-memory-test-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.multi-memory-agent-tab-head {
+  margin-bottom: 10px;
+}
+
+.multi-memory-agent-score,
+.multi-memory-test-status {
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.multi-memory-agent-meta {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.multi-memory-status-panel {
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.multi-memory-test-case {
+  align-items: flex-start;
+  padding: 16px;
+  border-radius: 18px;
+}
+
+.memory-chart-panel,
+.memory-report-panel,
+.memory-agent-card,
+.memory-brief-card,
+.memory-layer-panel {
+  padding: 20px;
+}
+
+.memory-score-hero-value {
+  font-size: clamp(52px, 8vw, 78px);
+  line-height: 0.95;
+  margin: 8px 0 18px;
+  font-weight: 800;
+}
+
+.memory-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.memory-hero-stats div,
+.memory-brief-item {
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.memory-hero-stats strong,
+.memory-brief-item strong {
+  display: block;
+  font-size: 24px;
+  margin-bottom: 6px;
+}
+
+.memory-hero-stats span,
+.memory-brief-item span,
+.memory-brief-item label,
+.memory-hero-footnote {
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.memory-hero-footnote {
+  margin-top: 14px;
+}
+
+.memory-brief-list,
+.memory-layer-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.memory-panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.memory-panel-head h3 {
+  margin-bottom: 4px;
+}
+
+.memory-panel-head span {
+  color: #93c5fd;
+  font-size: 13px;
+}
+
+.memory-layer-panel {
+  height: 100%;
+}
+
+.memory-layer-card {
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.24);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.memory-layer-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.memory-layer-card-head span {
+  min-width: 48px;
+  text-align: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(125, 211, 252, 0.2);
+  color: #e0f2fe;
+  font-weight: 700;
+}
+
+.memory-layer-pill-row,
+.memory-agent-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.memory-agent-meta {
+  margin-bottom: 14px;
+}
+
+.memory-layer-pill-row {
+  margin-top: 12px;
+}
+
+.memory-agent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.memory-agent-meta span,
+.memory-layer-pill-row span,
+.memory-layer-row span,
+.memory-test-case span,
+.memory-issue-list span {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+  font-size: 12px;
+}
+
+.memory-layer-list,
+.memory-test-case-list,
+.memory-issue-list {
+  display: grid;
+  gap: 10px;
+}
+
+.memory-layer-row,
+.memory-test-case {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.24);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.memory-layer-row strong,
+.memory-test-case strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.memory-issue-list {
+  margin-top: 14px;
+}
+
+.memory-issue-list span {
+  width: fit-content;
+  background: rgba(248, 113, 113, 0.12);
+  border-color: rgba(248, 113, 113, 0.2);
+  color: #fecaca;
+}
+
+.memory-report-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.memory-report-summary div {
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.memory-report-summary strong {
+  display: block;
+  font-size: 24px;
+  margin-bottom: 6px;
+}
+
+.memory-report-summary span {
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+@media (max-width: 720px) {
+  .memory-overview,
+  .memory-insight-grid,
+  .memory-analysis-grid,
+  .memory-overview-metrics,
+  .memory-overview-highlights,
+  .memory-hero-stats,
+  .multi-memory-overview-grid,
+  .multi-memory-agents-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .memory-overview-head,
+  .memory-layer-row,
+  .memory-test-case,
+  .memory-panel-head,
+  .memory-layer-card-head,
+  .multi-memory-agent-tab-head,
+  .multi-memory-test-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .memory-overview-score {
+    width: 100%;
+    text-align: left;
+  }
+
+  .multi-memory-meta-row {
+    justify-content: flex-start;
+  }
 }

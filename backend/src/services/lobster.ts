@@ -2,6 +2,7 @@ import { readFile, stat, readdir } from 'fs/promises';
 import { join } from 'path';
 import { spawn } from 'child_process';
 import { getModelBrainMapping, getModelDescription, type ModelBrainMapping } from './modelMapper';
+import { getMemoryScore as getMemoryScoreDetail, type MemoryAgentScore, type MemoryLayerScore } from './memoryScore';
 
 const OPENCLAW_DIR = '/Users/moltbot/.openclaw';
 
@@ -66,6 +67,11 @@ export interface LobsterStats {
     deep: { count: number; quality: number; files: string[] };
     organization: number;
     completeness: number;
+    overallScore: number;
+    indexedAgents: number;
+    totalAgents: number;
+    layers: MemoryLayerScore[];
+    agents: MemoryAgentScore[];
   };
 }
 
@@ -151,7 +157,7 @@ async function getSkillCount(): Promise<number> {
   } catch { return 0; }
 }
 
-async function getMemoryScore(): Promise<number> {
+async function getMemoryFileCount(): Promise<number> {
   try {
     const { readdir } = await import('fs/promises');
     const memoryDir = join(OPENCLAW_DIR, 'workspace', 'memory');
@@ -204,19 +210,20 @@ function calculateLevel(tokens: number): { level: number; experience: number; ma
 }
 
 export async function getLobsterStats(): Promise<LobsterStats> {
-  const [config, age, tokenStats, skillCount, memoryScore, modelMapping, modelDesc] = await Promise.all([
+  const [config, age, tokenStats, skillCount, memoryFileCount, modelMapping, modelDesc, memoryDetail] = await Promise.all([
     getOpenClawConfig(),
     getAge(),
     getTokenStats(),
     getSkillCount(),
-    getMemoryScore(),
+    getMemoryFileCount(),
     getModelBrainMapping(),
     getModelDescription(),
+    getMemoryScoreDetail(),
   ]);
   
   const { level, experience, maxExperience } = calculateLevel(tokenStats.totalTokens);
   const memoryStats = await analyzeMemory();
-  const brain = calculateBrain(tokenStats.totalTokens, tokenStats.totalSessions, memoryScore, modelMapping);
+  const brain = calculateBrain(tokenStats.totalTokens, tokenStats.totalSessions, memoryFileCount, modelMapping);
   const limbs = calculateLimbs(tokenStats.totalTokens, modelMapping);
   
   return {
@@ -246,13 +253,18 @@ export async function getLobsterStats(): Promise<LobsterStats> {
         files: memoryStats.deepFiles
       },
       organization: memoryStats.organization,
-      completeness: memoryStats.completeness
+      completeness: memoryStats.completeness,
+      overallScore: memoryDetail.overall.score,
+      indexedAgents: memoryDetail.agents.filter((agent) => agent.vectorReady && agent.memorySourceFiles > 0).length,
+      totalAgents: memoryDetail.agents.length,
+      layers: memoryDetail.layers,
+      agents: memoryDetail.agents,
     },
     
     limbs,
     
     intelligence: Math.floor((brain.cerebral * 0.5) + (brain.neurons * 0.2) + (modelMapping.benchmark.intelligence * 0.3)),
-    memoryScore: Math.floor((brain.longTerm * 0.45) + (brain.episodic * 0.2) + (modelMapping.benchmark.contextScore * 0.35)),
+    memoryScore: Math.round(memoryDetail.overall.score),
     skills: skillCount,
     experiencePool: Math.floor(tokenStats.totalSessions / 5),
     

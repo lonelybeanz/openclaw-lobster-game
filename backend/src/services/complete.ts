@@ -8,6 +8,7 @@ import type { ModelBrainMapping } from './modelMapper';
 import type { SkillsStats } from './skillsAnalyzer';
 import type { AchievementsStats } from './achievements';
 import type { Dialogue } from './dialogue';
+import type { MemoryAgentScore, MemoryLayerScore } from './memoryScore';
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const skillsCache = createTtlCache<SkillsStats>(CACHE_TTL_MS);
@@ -30,6 +31,11 @@ export interface CompleteLobsterStats {
     deep: { count: number; quality: number; files: string[] };
     organization: number;
     completeness: number;
+    overallScore: number;
+    indexedAgents: number;
+    totalAgents: number;
+    layers: MemoryLayerScore[];
+    agents: MemoryAgentScore[];
   };
   limbs: Limbs;
   intelligence: number;

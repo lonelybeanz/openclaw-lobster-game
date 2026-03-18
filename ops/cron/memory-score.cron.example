@@ -1,0 +1,4 @@
+# 每 30 分钟执行一次记忆评分与向量检索测试
+MEMORY_SCORE_CRON="*/30 * * * *"
+
+*/30 * * * * cd /Users/moltbot/projects/openclaw-lobster-game/backend && /opt/homebrew/bin/bun run memory:cron >> /Users/moltbot/projects/openclaw-lobster-game/data/memory-score-cron.log 2>&1

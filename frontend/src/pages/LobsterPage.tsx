@@ -1,6 +1,28 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getLobsterNews, getLobsterStats, interact, getMilestones, getCareMessage, deepTalk, searchNews } from '../api';
-import type { AchievementItem, LobsterNewsItem, LobsterStats, RandomEvent } from '../types';
+import {
+  RequestTimeoutError,
+  deepTalk,
+  getCareMessage,
+  getLobsterNews,
+  getLobsterStats,
+  getMemoryLlmEval,
+  getMemoryScore,
+  getMilestones,
+  getSearchResult,
+  interact,
+  saveMemoryLlmEval,
+  searchNews,
+} from '../api';
+import type {
+  AchievementItem,
+  LobsterNewsItem,
+  LobsterStats,
+  MemoryLlmEvalResponse,
+  MemoryLlmEvalSavedRecord,
+  MemoryScoreSnapshot,
+  RandomEvent,
+} from '../types';
+import MemoryScorePanel from '../components/MemoryScorePanel';
 
 type ActionType = 'feed' | 'train' | 'rest';
 
@@ -10,6 +32,12 @@ type DeltaState = {
   fatigue: number;
   experience: number;
 };
+
+type SearchUiState = 'idle' | 'loading' | 'success' | 'empty' | 'error' | 'timeout';
+
+const SEARCH_START_TIMEOUT_MS = 10000;
+const SEARCH_POLL_INTERVAL_MS = 2000;
+const SEARCH_MAX_WAIT_MS = 60000;
 
 const initialDelta: DeltaState = {
   hunger: 0,
@@ -88,13 +116,61 @@ function sourceTip(text: string) {
   );
 }
 
+function formatDateLabel(value?: string | null) {
+  if (!value) {
+    return '暂无记录';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' });
+}
+
+function formatDateTimeLabel(value?: string | null) {
+  if (!value) {
+    return '暂无记录';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString('zh-CN', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function evalTone(score: number | null) {
+  if (score === null) {
+    return '#cbd5e1';
+  }
+  if (score >= 90) {
+    return '#86efac';
+  }
+  if (score >= 75) {
+    return '#fde68a';
+  }
+  return '#fca5a5';
+}
+
 export default function LobsterPage() {
   const [stats, setStats] = useState<LobsterStats | null>(null);
   const [news, setNews] = useState<LobsterNewsItem[]>([]);
+  const [memorySnapshot, setMemorySnapshot] = useState<MemoryScoreSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [newsLoading, setNewsLoading] = useState(true);
+  const [memoryLoading, setMemoryLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newsError, setNewsError] = useState<string | null>(null);
+  const [memoryError, setMemoryError] = useState<string | null>(null);
+  const [memoryEval, setMemoryEval] = useState<MemoryLlmEvalResponse | null>(null);
+  const [memoryEvalLoading, setMemoryEvalLoading] = useState(false);
+  const [memoryEvalMessage, setMemoryEvalMessage] = useState('点击 AI 评分，检查每个 agent 的记忆结构、可检索性和长期记忆支持度。');
+  const [memoryEvalError, setMemoryEvalError] = useState<string | null>(null);
+  const [memoryEvalSavedRecord, setMemoryEvalSavedRecord] = useState<MemoryLlmEvalSavedRecord | null>(null);
   const [delta, setDelta] = useState<DeltaState>(initialDelta);
   const [lastAction, setLastAction] = useState<string>('等待互动');
   const [expandedNewsId, setExpandedNewsId] = useState<string | null>(null);
@@ -109,8 +185,12 @@ export default function LobsterPage() {
   const [deepTalkLoading, setDeepTalkLoading] = useState(false);
   const [deepTalkInput, setDeepTalkInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('OpenClaw 最新版本 新功能 教程');
-  const [searchResults, setSearchResults] = useState<any[] | null>(null);
+  const [searchResults, setSearchResults] = useState<LobsterNewsItem[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [searchState, setSearchState] = useState<SearchUiState>('idle');
+  const [searchMessage, setSearchMessage] = useState('');
+  const [searchJobId, setSearchJobId] = useState<string | null>(null);
+  const [showSearchTimeoutModal, setShowSearchTimeoutModal] = useState(false);
   const [showAchievementModal, setShowAchievementModal] = useState(false);
   const [achievements, setAchievements] = useState<AchievementItem[]>([]);
   const [achievementsLoading, setAchievementsLoading] = useState(false);
@@ -148,8 +228,21 @@ export default function LobsterPage() {
     }
   }
 
+  async function loadMemorySnapshot() {
+    try {
+      setMemoryLoading(true);
+      setMemoryError(null);
+      const data = await getMemoryScore();
+      setMemorySnapshot(data);
+    } catch (e) {
+      setMemoryError(e instanceof Error ? e.message : '加载失败');
+    } finally {
+      setMemoryLoading(false);
+    }
+  }
+
   async function refreshAll() {
-    await Promise.all([loadStats(), loadNews()]);
+    await Promise.all([loadStats(), loadNews(), loadMemorySnapshot()]);
   }
 
   async function openMilestoneModal() {
@@ -196,25 +289,135 @@ export default function LobsterPage() {
     }
   }
 
-  async function handleSearch() {
-    if (!searchQuery.trim()) return;
-    setSearchLoading(true);
-    setSearchResults(null);
+  async function handleMemoryEval() {
     try {
-      const result = await searchNews(searchQuery);
-      const results = Array.isArray(result?.results) ? result.results.map(normalizeNewsItem) : [];
-      if (results && results.length > 0) {
-        setSearchResults(results);
-        setNewsSubTab('search');
-        setLastAction('搜索完成！🔍');
-      } else {
-        setLastAction('未找到结果');
-      }
+      setMemoryEvalLoading(true);
+      setMemoryEvalError(null);
+      setMemoryEvalMessage('AI 正在逐个检查 agent 的核心记忆文件，这通常需要几十秒，请稍等。');
+      const result = await getMemoryLlmEval();
+      setMemoryEval(result);
+      setMemoryEvalMessage('评分完成，正在将结果写入后端 JSON 持久化存储...');
+      const savedRecord = await saveMemoryLlmEval(result);
+      setMemoryEvalSavedRecord(savedRecord);
+      setMemoryEvalMessage(`AI 评分完成，已保存 ${result.agents.length} 个 agent 的评分结果。`);
     } catch (e) {
+      const message = e instanceof Error ? e.message : 'AI 评分失败';
+      setMemoryEvalError(message);
+      setMemoryEvalMessage('本次评分没有成功返回结果，你可以稍后重试。');
+    } finally {
+      setMemoryEvalLoading(false);
+    }
+  }
+
+  function applySearchResults(items: LobsterNewsItem[]) {
+    setSearchResults(items);
+    if (items.length > 0) {
+      setSearchState('success');
+      setSearchMessage(`已找到 ${items.length} 条资讯`);
+      setLastAction('搜索完成！🔍');
+      return;
+    }
+
+    setSearchState('empty');
+    setSearchMessage('这次没有找到相关资讯，可以换个关键词重试。');
+    setLastAction('未找到结果');
+  }
+
+  async function pollSearchJob(jobId: string, maxWaitMs: number | null = SEARCH_MAX_WAIT_MS) {
+    const deadline = maxWaitMs === null ? null : Date.now() + maxWaitMs;
+
+    while (deadline === null || Date.now() < deadline) {
+      const result = await getSearchResult(jobId, SEARCH_START_TIMEOUT_MS);
+      if (result?.status === 'done') {
+        const results = Array.isArray(result.results) ? result.results.map(normalizeNewsItem) : [];
+        setShowSearchTimeoutModal(false);
+        applySearchResults(results);
+        return true;
+      }
+
+      if (result?.status === 'error') {
+        setShowSearchTimeoutModal(false);
+        throw new Error(result.error || '搜索任务失败');
+      }
+
+      await new Promise((resolve) => window.setTimeout(resolve, SEARCH_POLL_INTERVAL_MS));
+    }
+
+    setSearchState('timeout');
+    setSearchMessage('搜索已超过 60 秒，OpenClaw 仍在处理中。');
+    setLastAction('搜索超时，等待你的选择');
+    setShowSearchTimeoutModal(true);
+    return false;
+  }
+
+  async function handleSearch() {
+    const query = searchQuery.trim();
+    if (!query) {
+      setSearchState('error');
+      setSearchMessage('请输入搜索关键词');
+      return;
+    }
+
+    setActiveTab('news');
+    setNewsSubTab('search');
+    setSearchLoading(true);
+    setSearchState('loading');
+    setSearchMessage('正在调用 OpenClaw 搜索互联网资讯，预计需要 1 分钟左右...');
+    setSearchResults([]);
+    setSearchJobId(null);
+    setShowSearchTimeoutModal(false);
+
+    try {
+      const job = await searchNews(query, true, SEARCH_START_TIMEOUT_MS);
+      if (!job?.jobId) {
+        throw new Error('搜索任务创建失败');
+      }
+
+      setSearchJobId(job.jobId);
+      await pollSearchJob(job.jobId);
+    } catch (e) {
+      const message =
+        e instanceof RequestTimeoutError
+          ? '搜索请求启动超时，请检查后端或稍后重试。'
+          : e instanceof Error
+            ? e.message
+            : '搜索失败';
+      setSearchState('error');
+      setSearchMessage(message);
       setLastAction('搜索失败');
     } finally {
       setSearchLoading(false);
     }
+  }
+
+  async function handleContinueSearch() {
+    if (!searchJobId) {
+      return;
+    }
+
+    setShowSearchTimeoutModal(false);
+    setSearchLoading(true);
+    setSearchState('loading');
+    setSearchMessage('继续等待 OpenClaw 返回搜索结果...');
+
+    try {
+      await pollSearchJob(searchJobId, null);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : '继续查询失败';
+      setSearchState('error');
+      setSearchMessage(message);
+      setLastAction('继续查询失败');
+    } finally {
+      setSearchLoading(false);
+    }
+  }
+
+  function handleCancelSearchWait() {
+    setShowSearchTimeoutModal(false);
+    setSearchLoading(false);
+    setSearchState('timeout');
+    setSearchMessage('你已停止等待，本次搜索任务可稍后重新发起。');
+    setLastAction('已取消等待搜索结果');
   }
 
   useEffect(() => {
@@ -296,6 +499,18 @@ export default function LobsterPage() {
   const benchmarkSpeed = benchmark?.speedScore ?? 50;
   const benchmarkLatency = benchmark?.latencyScore ?? 50;
   const benchmarkCost = benchmark?.costScore ?? 50;
+  const memoryOverview = {
+    shallowCount: toNumber(view?.memory?.shallow?.count),
+    shallowQuality: toNumber(view?.memory?.shallow?.quality),
+    organization: toNumber(view?.memory?.organization),
+    completeness: toNumber(view?.memory?.completeness),
+    overallScore: toNumber(view?.memory?.overallScore ?? memorySnapshot?.overall?.score),
+    deepCount: toNumber(view?.memory?.deep?.count),
+    indexedAgents: toNumber(view?.memory?.indexedAgents ?? memorySnapshot?.indexedAgents),
+    totalAgents: toNumber(view?.memory?.totalAgents ?? memorySnapshot?.totalAgents),
+    historyDays: memorySnapshot?.history.length ?? 0,
+    latestRunAt: memorySnapshot?.scheduler.lastRunAt ?? null,
+  };
 
   const reasoningScore = cerebral * 0.28 + opticLobes * 0.14 + antennaLobe * 0.14 + neurons * 0.14 + benchmarkReasoning * 0.3;
   const intelligenceScore = cerebral * 0.22 + neurons * 0.18 + reasoningScore * 0.25 + benchmarkIntelligence * 0.35;
@@ -432,6 +647,50 @@ export default function LobsterPage() {
                   {formatEventEffect(randomEventPrompt) ? <p className="random-event-effect">{formatEventEffect(randomEventPrompt)}</p> : null}
                 </div>
               ) : null}
+
+      {showSearchTimeoutModal ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="搜索等待确认"
+          onClick={handleCancelSearchWait}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1100,
+            padding: '16px',
+          }}
+        >
+          <div
+            className="glass-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 'min(420px, 100%)',
+              borderRadius: '16px',
+              padding: '20px',
+              border: '1px solid rgba(255,255,255,0.18)',
+              background: 'rgba(9, 14, 28, 0.95)',
+            }}
+          >
+            <h3 style={{ margin: '0 0 10px 0' }}>搜索还在进行中</h3>
+            <p style={{ margin: '0 0 16px 0', color: '#cfd6ff', lineHeight: 1.6 }}>
+              OpenClaw 搜索已超过 60 秒，是否继续等待？
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <button type="button" onClick={handleCancelSearchWait} className="milestone-btn" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                取消
+              </button>
+              <button type="button" onClick={() => void handleContinueSearch()} className="milestone-btn">
+                继续等待
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
               <p className="hint">互动行为已写入服务端持久化状态。</p>
             </article>
           </section>
@@ -592,51 +851,147 @@ export default function LobsterPage() {
           </section>
 
           <section className="fade-in-up delay-3 tab-content" data-tab="memory">
-            <h3 style={{ margin: '0 0 12px 0' }}>💾 记忆系统</h3>
-            <div
-              className="kpi-grid lobster-kpi-grid"
-              style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}
-            >
-              <article className="kpi-card gradient-card-soft">
-                <p>浅层记忆数 {sourceTip('来自: memory/YYYY-MM-DD-*.md 文件计数')}</p>
-                <h2>{displayValue(view.memory?.shallow?.count)}</h2>
-              </article>
-              <article className="kpi-card gradient-card-soft">
-                <p>记忆质量 {sourceTip('来自: 记忆内容结构评分')}</p>
-                <h2>{displayValue(view.memory?.shallow?.quality)}</h2>
-              </article>
-              <article className="kpi-card gradient-card-soft">
-                <p>组织度 {sourceTip('来自: MEMORY/SOUL/USER 等核心文件覆盖')}</p>
-                <h2>{displayValue(view.memory?.organization)}</h2>
-              </article>
-              <article className="kpi-card gradient-card-soft">
-                <p>完整度 {sourceTip('来自: MEMORY.md + USER.md + SOUL.md')}</p>
-                <h2>{displayValue(view.memory?.completeness)}</h2>
-              </article>
-              <article className="kpi-card gradient-card-soft" style={{ gridColumn: '1 / -1' }}>
-                <p>近期记忆文件</p>
-                {view.memory?.shallow?.recent && view.memory.shallow.recent.length > 0 ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '8px' }}>
-                    {view.memory.shallow.recent.map((item) => (
-                      <div
-                        key={item}
-                        style={{
-                          padding: '8px 10px',
-                          borderRadius: '8px',
-                          background: 'rgba(255,255,255,0.08)',
-                          border: '1px solid rgba(255,255,255,0.12)',
-                          wordBreak: 'break-all',
-                        }}
-                      >
-                        {item}
-                      </div>
-                    ))}
+            <div className="memory-overview">
+              <section className="panel glass-card memory-overview-hero">
+                <div className="memory-overview-badge">Memory Overview</div>
+                <div className="memory-overview-head">
+                  <div>
+                    <h3>记忆系统总览</h3>
+                    <p>把规模、结构和索引状态集中到一屏，先看整体健康度，再向下看层级与 Agent 细节。</p>
                   </div>
-                ) : (
-                  <h2>--</h2>
-                )}
-              </article>
+                  <div className="memory-overview-score">
+                    <span>综合评分</span>
+                    <strong>{displayValue(memoryOverview.overallScore)}</strong>
+                  </div>
+                </div>
+                <div className="memory-overview-highlights">
+                  <div>
+                    <span>活跃记忆文件</span>
+                    <strong>{displayValue(memoryOverview.shallowCount)}</strong>
+                  </div>
+                  <div>
+                    <span>深层记忆节点</span>
+                    <strong>{displayValue(memoryOverview.deepCount)}</strong>
+                  </div>
+                  <div>
+                    <span>索引 Agent</span>
+                    <strong>{memoryOverview.indexedAgents}/{memoryOverview.totalAgents || '--'}</strong>
+                  </div>
+                </div>
+                <div className="memory-overview-footer">
+                  <span>最近调度: {formatDateLabel(memoryOverview.latestRunAt)}</span>
+                  <span>评分样本: {memoryOverview.historyDays} 天</span>
+                </div>
+              </section>
+
+              <section className="memory-overview-metrics">
+                <article className="kpi-card gradient-card-soft memory-metric-card">
+                  <p>浅层记忆数 {sourceTip('来自: memory/YYYY-MM-DD.md')}</p>
+                  <h2>{displayValue(view.memory?.shallow?.count)}</h2>
+                  <span>衡量日常记忆沉淀规模</span>
+                </article>
+                <article className="kpi-card gradient-card-soft memory-metric-card">
+                  <p>浅层质量 {sourceTip('来自: 当日记忆文件结构评分')}</p>
+                  <h2>{displayValue(view.memory?.shallow?.quality)}</h2>
+                  <span>关注当天记录是否清晰可检索</span>
+                </article>
+                <article className="kpi-card gradient-card-soft memory-metric-card">
+                  <p>组织度 {sourceTip('来自: 核心记忆文件覆盖')}</p>
+                  <h2>{displayValue(view.memory?.organization)}</h2>
+                  <span>越高说明核心文件结构越完整</span>
+                </article>
+                <article className="kpi-card gradient-card-soft memory-metric-card">
+                  <p>完整度 {sourceTip('来自: MEMORY/SOUL/AGENTS/USER')}</p>
+                  <h2>{displayValue(view.memory?.completeness)}</h2>
+                  <span>衡量记忆体系是否形成闭环</span>
+                </article>
+              </section>
             </div>
+            <MemoryScorePanel snapshot={memorySnapshot} loading={memoryLoading} error={memoryError} />
+            <section className="memory-ai-eval-section">
+              <article className="panel glass-card memory-ai-eval-hero">
+                <div className="memory-panel-head">
+                  <div>
+                    <h3>AI 评分</h3>
+                    <p>调用 `/lobster/memory-llm-eval`，按 agent 输出独立评分卡，并将结果持久化保存到后端 `data` 目录。</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void handleMemoryEval()}
+                    disabled={memoryEvalLoading}
+                    className="milestone-btn"
+                  >
+                    {memoryEvalLoading ? 'AI 评分中...' : 'AI评分'}
+                  </button>
+                </div>
+                <div className={`memory-ai-eval-status${memoryEvalLoading ? ' loading' : ''}${memoryEvalError ? ' error' : ''}`}>
+                  {memoryEvalMessage}
+                </div>
+                {memoryEvalSavedRecord ? (
+                  <div className="memory-ai-eval-meta">
+                    <span>最近保存: {formatDateTimeLabel(memoryEvalSavedRecord.savedAt)}</span>
+                    <span>评估 Agent: {memoryEvalSavedRecord.result.totalAgents}</span>
+                    <span>评估器: {memoryEvalSavedRecord.result.evaluatorAgentId}</span>
+                  </div>
+                ) : null}
+              </article>
+
+              {memoryEval?.agents?.length ? (
+                <div className="memory-ai-eval-grid">
+                  {memoryEval.agents.map((agent) => (
+                    <article className="panel glass-card memory-ai-eval-card" key={agent.agentId}>
+                      <div className="memory-panel-head">
+                        <div>
+                          <h3>{agent.name || agent.agentId}</h3>
+                          <p>{agent.workspaceRoot}</p>
+                        </div>
+                        <div className="memory-ai-score-wrap">
+                          <strong style={{ color: evalTone(agent.evaluation.score) }}>
+                            {agent.evaluation.score ?? '--'}
+                          </strong>
+                          <span>{agent.evaluation.grade ?? '待定级'}</span>
+                        </div>
+                      </div>
+                      <p className="memory-ai-summary">{agent.evaluation.summary || '暂无总结'}</p>
+                      <div className="memory-layer-pill-row multi-memory-meta-row">
+                        <span>文件 {agent.files.filter((file) => file.exists).length}/{agent.files.length}</span>
+                        <span>{agent.agentId}</span>
+                      </div>
+                      {agent.evaluation.strengths.length > 0 ? (
+                        <div className="memory-ai-points">
+                          <label>亮点</label>
+                          <div className="memory-issue-list">
+                            {agent.evaluation.strengths.map((item) => (
+                              <span key={`${agent.agentId}-strength-${item}`}>{item}</span>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                      {agent.evaluation.risks.length > 0 ? (
+                        <div className="memory-ai-points">
+                          <label>风险</label>
+                          <div className="memory-issue-list">
+                            {agent.evaluation.risks.map((item) => (
+                              <span key={`${agent.agentId}-risk-${item}`}>{item}</span>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                      {agent.evaluation.suggestions.length > 0 ? (
+                        <div className="memory-ai-points">
+                          <label>建议</label>
+                          <div className="memory-issue-list">
+                            {agent.evaluation.suggestions.map((item) => (
+                              <span key={`${agent.agentId}-suggestion-${item}`}>{item}</span>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                    </article>
+                  ))}
+                </div>
+              ) : null}
+            </section>
           </section>
 
           <section className="panel glass-card lobster-news-panel fade-in-up delay-3 tab-content" data-tab="news">
@@ -738,31 +1093,48 @@ export default function LobsterPage() {
                     </button>
                   </div>
                 </div>
-                
-                {searchLoading ? (
-                  <p className="lobster-news-empty">搜索中...</p>
-                ) : searchResults && searchResults.length > 0 ? (
+
+                {searchMessage ? (
+                  <div style={{ marginBottom: '12px', fontSize: '13px', color: searchState === 'error' ? '#ff9b9b' : '#cfd6ff' }}>
+                    {searchMessage}
+                  </div>
+                ) : null}
+
+                {searchState === 'loading' ? (
+                  <div className="lobster-news-empty">正在检索资讯并等待 OpenClaw 返回结果...</div>
+                ) : null}
+
+                {searchState === 'error' ? (
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                    <button type="button" onClick={() => void handleSearch()} disabled={searchLoading} className="milestone-btn">
+                      重新搜索
+                    </button>
+                  </div>
+                ) : null}
+
+                {searchState === 'success' && searchResults.length > 0 ? (
                   <div style={{ maxHeight: '500px', overflow: 'auto' }}>
-                    {searchResults.map((item: any) => (
+                    {searchResults.map((item) => (
                       <div key={item.id} style={{ padding: '12px', marginBottom: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', borderLeft: '3px solid #667eea' }}>
                         <div style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '6px', lineHeight: '1.4' }}>{item.title}</div>
                         <div style={{ fontSize: '13px', color: '#aaa', marginBottom: '6px', lineHeight: '1.4' }}>{item.summary}</div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '11px', color: '#888' }}>{item.source} · {item.date}</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '11px', color: '#888' }}>{item.source} · {item.date || '未知日期'}</span>
                           {item.url ? (
-                            <a href={item.url} target="_blank" rel="noreferrer" style={{ color: '#667eea', fontSize: '12px' }}>
+                            <a href={item.url} target="_blank" rel="noreferrer" style={{ color: '#667eea', fontSize: '12px', flexShrink: 0 }}>
                               查看 →
                             </a>
                           ) : (
-                            <span style={{ fontSize: '11px', color: '#666' }}>无链接</span>
+                            <span style={{ fontSize: '11px', color: '#666', flexShrink: 0 }}>无链接</span>
                           )}
                         </div>
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <p className="lobster-news-empty">输入关键词搜索 OpenClaw 资讯</p>
-                )}
+                ) : null}
+
+                {searchState === 'empty' ? <p className="lobster-news-empty">暂无匹配结果，试试更具体的关键词。</p> : null}
+                {searchState === 'idle' ? <p className="lobster-news-empty">输入关键词搜索 OpenClaw 资讯</p> : null}
               </>
             )}
           </section>

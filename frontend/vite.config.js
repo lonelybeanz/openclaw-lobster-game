@@ -10,6 +10,11 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: function (path) { return path.replace(/^\/admin-api/, ''); },
             },
+            '^/lobster.*': {
+                target: 'http://localhost:13000',
+                changeOrigin: true,
+                rewrite: function (path) { return path; },
+            },
         },
     },
 });

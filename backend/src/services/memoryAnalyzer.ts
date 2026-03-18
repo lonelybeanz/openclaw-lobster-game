@@ -1,8 +1,8 @@
 import { readdir, readFile, stat } from 'fs/promises';
 import { join } from 'path';
 
-const OPENCLAW_DIR = '/Users/moltbot/.openclaw';
-const MEMORY_DIR = join(OPENCLAW_DIR, 'workspace', 'memory');
+const WORKSPACE_ROOT = process.env.OPENCLAW_MEMORY_WORKSPACE ?? '/Users/moltbot/.openclaw/workspace-dev';
+const MEMORY_DIR = join(WORKSPACE_ROOT, 'memory');
 
 export interface MemoryStats {
   // 浅层记忆 - 最近几天
@@ -109,12 +109,12 @@ export async function analyzeMemory(): Promise<MemoryStats> {
     stats.shallowRecent = recentDates.sort().slice(-5);
     
     // 分析深层记忆（核心文件）
-    const coreFiles = ['MEMORY.md', 'HIGH_LEVEL_PROMPTS.md', 'USER.md', 'SOUL.md', 'AGENTS.md'];
+    const coreFiles = ['MEMORY.md', 'USER.md', 'SOUL.md', 'AGENTS.md'];
     let deepQualitySum = 0;
     
     for (const coreFile of coreFiles) {
       try {
-        const filePath = join(MEMORY_DIR, coreFile);
+        const filePath = join(WORKSPACE_ROOT, coreFile);
         const content = await readFile(filePath, 'utf-8');
         const quality = evaluateFile(content);
         deepQualitySum += quality;
@@ -133,9 +133,10 @@ export async function analyzeMemory(): Promise<MemoryStats> {
     ));
     
     // 完整度评估
-    const hasMemory = allFiles.includes('MEMORY.md');
-    const hasUser = allFiles.includes('USER.md');
-    const hasSoul = allFiles.includes('SOUL.md');
+    const rootFiles = await readdir(WORKSPACE_ROOT);
+    const hasMemory = rootFiles.includes('MEMORY.md');
+    const hasUser = rootFiles.includes('USER.md');
+    const hasSoul = rootFiles.includes('SOUL.md');
     stats.completeness = Math.floor(((hasMemory ? 30 : 0) + (hasUser ? 30 : 0) + (hasSoul ? 40 : 0)));
     
   } catch (e) {

@@ -45,9 +45,142 @@ export type LobsterMemory = {
   };
   deep?: {
     count?: number;
+    quality?: number;
+    files?: string[];
   };
   organization?: number;
   completeness?: number;
+  overallScore?: number;
+  indexedAgents?: number;
+  totalAgents?: number;
+  layers?: MemoryLayerScore[];
+  agents?: MemoryAgentScore[];
+};
+
+export type MemoryLayerFile = {
+  path: string;
+  label: string;
+  exists: boolean;
+  size: number;
+  updatedAt: string | null;
+  qualityScore: number;
+  indexed: boolean;
+};
+
+export type MemoryLayerScore = {
+  key: 'l1' | 'l2' | 'l3';
+  label: string;
+  score: number;
+  completenessScore: number;
+  qualityScore: number;
+  indexScore: number;
+  indexed: boolean;
+  files: MemoryLayerFile[];
+  summary: string;
+};
+
+export type MemoryAgentScore = {
+  agentId: string;
+  workspaceDir: string;
+  backend: string;
+  vectorReady: boolean;
+  indexedFiles: number;
+  indexedChunks: number;
+  memorySourceFiles: number;
+  sessionSourceFiles: number;
+  dirty: boolean;
+  issues: string[];
+  score: number;
+};
+
+export type MemoryScoreHistoryItem = {
+  date: string;
+  score: number;
+  l1: number;
+  l2: number;
+  l3: number;
+  indexHealth: number;
+};
+
+export type MemoryTestCaseResult = {
+  id: string;
+  agentId: string;
+  query: string;
+  latencyMs: number;
+  hitCount: number;
+  passed: boolean;
+  matchedExpectation: boolean;
+  error?: string;
+};
+
+export type MemoryTestReport = {
+  runAt: string;
+  durationMs: number;
+  totalCases: number;
+  passedCases: number;
+  accuracyRate: number;
+  averageLatencyMs: number;
+  results: MemoryTestCaseResult[];
+};
+
+export type MemoryScoreSnapshot = {
+  workspaceRoot: string;
+  overallScore: number;
+  indexedAgents: number;
+  totalAgents: number;
+  overall: {
+    score: number;
+    grade: string;
+    completenessScore: number;
+    qualityScore: number;
+    indexScore: number;
+  };
+  layers: MemoryLayerScore[];
+  agents: MemoryAgentScore[];
+  history: MemoryScoreHistoryItem[];
+  latestTestReport: MemoryTestReport | null;
+  scheduler: {
+    enabled: boolean;
+    intervalMinutes: number;
+    testCaseCount: number;
+    lastRunAt: string | null;
+  };
+};
+
+export type MemoryLlmEvalAgentEvaluation = {
+  score: number | null;
+  grade: string | null;
+  summary: string;
+  strengths: string[];
+  risks: string[];
+  suggestions: string[];
+  raw: string;
+};
+
+export type MemoryLlmEvalFile = {
+  path: string;
+  exists: boolean;
+  content: string;
+  truncated: boolean;
+};
+
+export type MemoryLlmEvalAgent = {
+  agentId: string;
+  name: string | null;
+  workspaceRoot: string;
+  files: MemoryLlmEvalFile[];
+  evaluation: MemoryLlmEvalAgentEvaluation;
+};
+
+export type MemoryLlmEvalResponse = {
+  evaluatorAgentId: string;
+  totalAgents: number;
+  agents: MemoryLlmEvalAgent[];
+};
+
+export type MemoryLlmEvalSavedRecord = {
+  savedAt: string;
+  result: MemoryLlmEvalResponse;
 };
 
 export type BenchmarkScores = {
@@ -149,10 +282,22 @@ export type AchievementItem = Achievement & {
   achievedAt?: string;
 };
 
+export type SearchNewsStatus = 'pending' | 'done' | 'error';
+
 export type SearchNewsResponse = {
   success: boolean;
   results?: LobsterNewsItem[];
   jobId?: string;
-  status?: 'pending' | 'done' | 'error';
+  query?: string;
+  status?: SearchNewsStatus;
   error?: string;
+  startedAt?: string;
+  finishedAt?: string;
+};
+
+export type SkillStats = {
+  total: number;
+  skills?: string[];
+  categories?: string[];
+  recentlyAdded?: string[];
 };

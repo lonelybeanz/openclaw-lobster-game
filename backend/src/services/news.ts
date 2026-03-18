@@ -1,14 +1,7 @@
 import { fetch } from 'undici';
 import { readFile, readdir } from 'fs/promises';
 import { join } from 'path';
-import { spawn } from 'child_process';
-
-const ACPX = '/Users/moltbot/.nvm/versions/node/v22.22.0/bin/acpx';
-const ENV = {
-  ...process.env,
-  PATH: '/Users/moltbot/.nvm/versions/node/v22.22.0/bin:/usr/local/bin:/usr/bin:/bin',
-  HOME: '/Users/moltbot',
-};
+import { runOpenClawAgentPrompt } from './openclaw';
 
 export interface NewsItem {
   id: string;
@@ -40,7 +33,7 @@ async function getLocalDocs(): Promise<NewsItem[]> {
           title: title.substring(0, 60),
           summary: content.substring(0, 100) + '...',
           source: '本地文档',
-          date: new Date().toISOString().split('T')[0]
+          date: new Date().toISOString().slice(0, 10)
         });
       } catch {}
     }
@@ -68,8 +61,6 @@ async function fetchGitHub<T>(path: string): Promise<T | null> {
 }
 
 const OPENCLAW_REPO = 'openclaw/openclaw';
-const PROJECT_DIR = '/Users/moltbot/projects/openclaw-lobster-game';
-
 async function getGitHubNews(): Promise<NewsItem[]> {
   const news: NewsItem[] = [];
   
@@ -130,7 +121,7 @@ function normalizeNewsItem(item: Partial<NewsItem>, index: number, prefix: strin
     title: (item.title || '无标题').slice(0, 120),
     summary: item.summary || '暂无简介',
     source: item.source || '互联网',
-    date: item.date || new Date().toISOString().split('T')[0],
+    date: item.date || new Date().toISOString().slice(0, 10),
     url: item.url || '',
     type: item.type,
   };
@@ -197,35 +188,34 @@ export async function getOpenClawNews(): Promise<NewsItem[]> {
       title: '欢迎使用 OpenClaw 龙虾养成',
       summary: '查看 OpenClaw 文档了解更多信息',
       source: '系统',
-      date: new Date().toISOString().split('T')[0]
+      date: new Date().toISOString().slice(0, 10)
     }];
   }
   
   return all.slice(0, 20);
 }
 
-function runAcpx(prompt: string, timeoutMs = 60000): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(ACPX, ['codex', 'prompt', '--', prompt], { 
-      env: ENV, 
-      timeout: timeoutMs,
-      cwd: PROJECT_DIR
-    });
-    let stdout = '';
-    let stderr = '';
-    child.stdout?.on('data', d => stdout += d);
-    child.stderr?.on('data', d => stderr += d);
-    child.on('close', code => {
-      if (code === 0) resolve(stdout.trim());
-      else reject(new Error(`exit ${code}: ${stderr.slice(0, 200)}`));
-    });
-    child.on('error', err => reject(err));
-    setTimeout(() => { child.kill('SIGTERM'); reject(new Error('timeout')); }, timeoutMs);
-  });
-}
-
 // 使用 OpenClaw 搜索互联网资讯（异步后台执行）
-const searchJobs = new Map<string, { status: 'pending' | 'done' | 'error', results?: NewsItem[], error?: string }>();
+type SearchJob = {
+  status: 'pending' | 'done' | 'error';
+  query: string;
+  startedAt: string;
+  finishedAt?: string;
+  results?: NewsItem[];
+  error?: string;
+};
+
+const SEARCH_JOB_TTL_MS = 10 * 60 * 1000;
+const searchJobs = new Map<string, SearchJob>();
+
+function cleanupSearchJobs() {
+  const now = Date.now();
+  for (const [jobId, job] of searchJobs.entries()) {
+    if (now - new Date(job.startedAt).getTime() > SEARCH_JOB_TTL_MS) {
+      searchJobs.delete(jobId);
+    }
+  }
+}
 
 function parseSearchOutput(output: string): NewsItem[] {
   const lines = output
@@ -239,12 +229,47 @@ function parseSearchOutput(output: string): NewsItem[] {
       ? cleaned.split('|').map((part) => part.trim())
       : cleaned.split(/\s+-\s+/).map((part) => part.trim());
 
+    const urlPattern = /^https?:\/\//i;
+    const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+
+    let title = segments[0] || '';
+    let summary = segments[1] || '';
+    let source = segments[2] || '';
+    let date = segments[3] || '';
+    let url = segments[4] || '';
+
+    if (segments.length >= 4 && urlPattern.test(segments[3] || '')) {
+      source = segments[2] || '';
+      date = '';
+      url = segments[3] || '';
+    }
+
+    if (segments.length === 3 && datePattern.test(segments[2] || '')) {
+      summary = '';
+      source = segments[1] || '';
+      date = segments[2] || '';
+    }
+
+    if (segments.length === 3 && urlPattern.test(segments[2] || '')) {
+      summary = segments[1] || '';
+      source = new URL(segments[2]).hostname.replace(/^www\./, '');
+      date = '';
+      url = segments[2] || '';
+    }
+
+    if (!source && urlPattern.test(url)) {
+      try {
+        source = new URL(url).hostname.replace(/^www\./, '');
+      } catch {}
+    }
+
     return normalizeNewsItem(
       {
-        title: segments[0],
-        summary: segments[1],
-        source: segments[2],
-        date: segments[3],
+        title,
+        summary,
+        source,
+        date,
+        url,
       },
       index,
       'web'
@@ -254,31 +279,36 @@ function parseSearchOutput(output: string): NewsItem[] {
 
 export async function searchWithOpenClawAsync(query: string): Promise<string> {
   const jobId = `search-${Date.now()}`;
-  searchJobs.set(jobId, { status: 'pending' });
-  
-  // 后台执行搜索
+  const startedAt = new Date().toISOString();
+  cleanupSearchJobs();
+  searchJobs.set(jobId, { status: 'pending', query, startedAt });
+
   (async () => {
     try {
-      const prompt = `请搜索以下主题的最新资讯（最新版本、新功能、教程、攻略等），返回10条：
-
-主题：${query}
-
-格式：
-1. [标题] - 简介 - 来源 - 日期
-2. ...`;
-
-      const output = await runAcpx(prompt, 45000);
-      const results = parseSearchOutput(output);
-      searchJobs.set(jobId, { status: 'done', results });
+      const results = await searchWithOpenClaw(query);
+      searchJobs.set(jobId, {
+        status: 'done',
+        query,
+        startedAt,
+        finishedAt: new Date().toISOString(),
+        results,
+      });
     } catch (e: any) {
-      searchJobs.set(jobId, { status: 'error', error: e.message });
+      searchJobs.set(jobId, {
+        status: 'error',
+        query,
+        startedAt,
+        finishedAt: new Date().toISOString(),
+        error: e?.message || '搜索失败',
+      });
     }
   })();
-  
+
   return jobId;
 }
 
-export function getSearchResult(jobId: string): { status: string, results?: NewsItem[], error?: string } {
+export function getSearchResult(jobId: string): SearchJob | { status: 'error', error: string } {
+  cleanupSearchJobs();
   return searchJobs.get(jobId) || { status: 'error', error: 'job not found' };
 }
 
@@ -288,12 +318,16 @@ export async function searchWithOpenClaw(query: string): Promise<NewsItem[]> {
 
 主题：${query}
 
-请返回最新10条信息，每条格式：
-[标题] | 简介 | 来源 | 日期
+请返回最新10条信息，并满足以下要求：
+1. 必须优先搜索 GitHub 之外的网站，至少覆盖 3 个不同站点来源（如官方文档、技术博客、新闻站、教程站、论坛、视频站等）
+2. 每条结果格式固定为：标题 | 简介 | 来源网站 | 日期(YYYY-MM-DD) | URL
+3. URL 必须是可直接打开的完整 http/https 链接
+4. 不要输出 markdown、编号解释、前后说明
+5. 如果确实找不到足够的非 GitHub 结果，再补充 GitHub 结果
 
 只返回搜索结果，每条一行，不要其他解释。`;
 
-    const output = await runAcpx(prompt, 15000);
+    const output = await runOpenClawAgentPrompt(prompt, 75000);
     const results = parseSearchOutput(output);
     if (results.length === 0) {
       throw new Error('no results');

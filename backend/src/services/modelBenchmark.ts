@@ -67,9 +67,9 @@ function toBenchmarkItem(row: Record<string, unknown>): ModelBenchmarkItem | nul
   );
   const model = String(
     getField(row, ['model', 'name', 'short_name', 'id', 'model_id', 'model_name', 'display_name'])
-      ?? primaryModel?.name
-      ?? primaryModel?.short_name
-      ?? ''
+    ?? primaryModel?.name
+    ?? primaryModel?.short_name
+    ?? ''
   ).trim();
   if (!model) return null;
 
@@ -101,11 +101,11 @@ function toBenchmarkItem(row: Record<string, unknown>): ModelBenchmarkItem | nul
     : null;
   const outputSpeed = parseNumber(
     getField(row, ['output_speed', 'outputSpeed', 'tokens_per_second', 'speed'])
-      ?? timescaleData?.median_output_speed
+    ?? timescaleData?.median_output_speed
   );
   const latency = parseNumber(
     getField(row, ['latency', 'first_token_latency', 'response_latency'])
-      ?? timescaleData?.median_time_to_first_chunk
+    ?? timescaleData?.median_time_to_first_chunk
   );
 
   const hasExpectedFields = [
@@ -168,12 +168,12 @@ function extractJsonCandidatesFromHtml(html: string): unknown[] {
       };
       const hostModels = nextData.props?.pageProps?.data?.hostModelsWithCaching;
       if (hostModels) candidates.push(hostModels);
-    } catch {}
+    } catch { }
   };
 
   try {
     candidates.push(JSON.parse(html));
-  } catch {}
+  } catch { }
 
   const nextDataMatch = html.match(/<script[^>]*id=['"]__NEXT_DATA__['"][^>]*>([\s\S]*?)<\/script>/i);
   if (nextDataMatch?.[1]) {
@@ -296,10 +296,9 @@ export async function fetchModelBenchmarks(): Promise<ModelBenchmarkItem[]> {
 
 function extractModelFamily(normalized: string): string {
   // Extract the base family name before common variant suffixes
-  // e.g. "deepseekchat" → "deepseek", "gpt4o" → "gpt"
+  // e.g.  "gpt4o" → "gpt"
   const patterns = [
     /^(gpt[34o]+)/,       // gpt3, gpt4, gpt4o
-    /^(deepseek)/,        // deepseek-chat, deepseek-v3, deepseek-r1
     /^(claude)/,          // claude-3, claude-3.5
     /^(gemini)/,          // gemini-1.5, gemini-2
     /^(minimax)/,         // minimax-m2.5
