@@ -8,3 +8,4 @@ backend/data/model-benchmarks.json
 *.tsbuildinfo
 *.bak
 *.backup
+member.sqlite*

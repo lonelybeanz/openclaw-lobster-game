@@ -1503,3 +1503,7 @@ body {
     justify-content: flex-start;
   }
 }
+
+/* Tab content default hidden */
+.tab-content { display: none; }
+.tab-content[data-tab="status"] { display: block; }
