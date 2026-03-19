@@ -1014,13 +1014,15 @@ export default function LobsterPage() {
                 </div>
               ) : null}
             </section>
-          </section>
 
-          <VisualizationDashboard
-            snapshot={visualizationSnapshot}
-            loading={visualizationLoading}
-            error={visualizationError}
-          />
+            {/* 图表数据 */}
+            <VisualizationDashboard
+              snapshot={visualizationSnapshot}
+              loading={visualizationLoading}
+              error={visualizationError}
+            />
+
+          </section>
 
           <section className="panel glass-card lobster-news-panel fade-in-up delay-3 tab-content" data-tab="news">
             {/* 子标签页 */}
@@ -1167,95 +1169,6 @@ export default function LobsterPage() {
             )}
           </section>
         </>
-      ) : null}
-
-      {/* 时间线 Tab */}
-      {activeTab === 'timeline' ? (
-        <section className="fade-in-up delay-3 tab-content" data-tab="timeline">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            {/* 健康趋势 */}
-            <div className="panel glass-card">
-              <h3 style={{ margin: '0 0 16px 0' }}>❤️ 健康趋势</h3>
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                {(['7d', '30d', '90d'] as const).map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setTimelinePeriod(p)}
-                    style={{
-                      padding: '6px 12px',
-                      border: 'none',
-                      borderRadius: '6px',
-                      background: timelinePeriod === p ? 'linear-gradient(135deg, #667eea, #764ba2)' : 'rgba(255,255,255,0.1)',
-                      color: 'white',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                    }}
-                  >
-                    {p.toUpperCase()}
-                  </button>
-                ))}
-              </div>
-              {stats && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
-                  <div style={{ padding: '8px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)' }}>
-                    <div style={{ fontSize: '11px', opacity: 0.7 }}>饥饿</div>
-                    <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{stats.hunger}%</div>
-                  </div>
-                  <div style={{ padding: '8px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)' }}>
-                    <div style={{ fontSize: '11px', opacity: 0.7 }}>心情</div>
-                    <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{stats.mood}%</div>
-                  </div>
-                  <div style={{ padding: '8px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)' }}>
-                    <div style={{ fontSize: '11px', opacity: 0.7 }}>疲劳</div>
-                    <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{stats.fatigue}%</div>
-                  </div>
-                  <div style={{ padding: '8px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)' }}>
-                    <div style={{ fontSize: '11px', opacity: 0.7 }}>健康</div>
-                    <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{stats.health ?? 100}%</div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 成长里程碑 */}
-            <div className="panel glass-card">
-              <h3 style={{ margin: '0 0 16px 0' }}>🏆 成就进度</h3>
-              {achievements.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {achievements.slice(0, 4).map((a) => (
-                    <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span>{a.unlocked ? '✅' : '🔒'}</span>
-                      <span style={{ fontSize: '13px' }}>{a.name}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p style={{ opacity: 0.6, fontSize: '13px' }}>暂无成就记录</p>
-              )}
-            </div>
-
-            {/* Token 趋势 */}
-            <div className="panel glass-card">
-              <h3 style={{ margin: '0 0 16px 0' }}>💰 Token 使用</h3>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>
-                {((stats?.totalTokens ?? 0) / 10000).toFixed(1)}万
-              </div>
-              <div style={{ fontSize: '12px', opacity: 0.7 }}>
-                共 {stats?.totalSessions ?? 0} 次会话
-              </div>
-            </div>
-
-            {/* 最近活动 */}
-            <div className="panel glass-card">
-              <h3 style={{ margin: '0 0 16px 0' }}>📅 最近活动</h3>
-              <div style={{ fontSize: '13px', opacity: 0.8 }}>
-                <p>🕐 最后互动: {lastAction}</p>
-                <p>📊 等级: Lv.{stats?.level ?? 1}</p>
-                <p>⭐ 经验: {stats?.experience ?? 0}</p>
-              </div>
-            </div>
-          </div>
-        </section>
       ) : null}
 
       {/* 成长里程碑模态框 */}
