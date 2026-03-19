@@ -1,9 +1,9 @@
-import { readFile, writeFile, mkdir } from 'fs/promises';
+import { readFile, writeFile, mkdir, readdir } from 'fs/promises';
 import { join } from 'path';
-import { spawn } from 'child_process';
 
 const DATA_DIR = join(__dirname, '..', '..', 'data');
 const STATS_FILE = join(DATA_DIR, 'token-stats.json');
+const OPENCLAW_DIR = '/Users/moltbot/.openclaw';
 
 interface TokenStatsHistoryItem {
   key: string;
@@ -20,19 +20,40 @@ interface TokenStatsFile {
   increments?: Array<{ date: string; added: number }>;
 }
 
-// 执行 CLI 命令
-function execCommand(cmd: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const child = spawn('bash', ['-c', cmd], { 
-      cwd: '/Users/moltbot',
-      env: { ...process.env, PATH: '/opt/homebrew/bin:/usr/local/bin:' + process.env.PATH }
-    });
-    let output = '';
-    child.stdout.on('data', (data) => output += data);
-    child.stderr.on('data', (data) => output += data);
-    child.on('close', (code) => resolve(output));
-    child.on('error', reject);
-  });
+// 直接从文件读取所有 agent 的会话数据
+async function readSessionsFromFiles(): Promise<Array<{ key: string; tokens: number; model: string; updatedAt: number }>> {
+  try {
+    const agentsDir = join(OPENCLAW_DIR, 'agents');
+    const agentDirs = await readdir(agentsDir, { withFileTypes: true });
+    
+    const sessions: Array<{ key: string; tokens: number; model: string; updatedAt: number }> = [];
+    
+    for (const agentDir of agentDirs) {
+      if (!agentDir.isDirectory()) continue;
+      
+      const sessionsFile = join(agentsDir, agentDir.name, 'sessions', 'sessions.json');
+      try {
+        const content = await readFile(sessionsFile, 'utf-8');
+        const data = JSON.parse(content);
+        
+        for (const [key, session] of Object.entries(data)) {
+          const s = session as any;
+          sessions.push({
+            key,
+            tokens: s.totalTokens || s.tokenUsage?.total || s.tokens?.total || 0,
+            model: s.model || 'unknown',
+            updatedAt: s.updatedAt || Date.now(),
+          });
+        }
+      } catch {
+        // 文件不存在或解析失败，跳过
+      }
+    }
+    
+    return sessions;
+  } catch {
+    return [];
+  }
 }
 
 async function readStatsFile(): Promise<TokenStatsFile> {
@@ -63,19 +84,16 @@ export async function initTokenStats(): Promise<{ totalTokens: number; sessions:
     // 确保 data 目录存在
     await mkdir(DATA_DIR, { recursive: true });
     
-    const output = await execCommand('openclaw sessions --all-agents --json 2>/dev/null');
-    const data = JSON.parse(output);
-    
-    const sessions = data.sessions || [];
-    const totalTokens = sessions.reduce((sum: number, s: any) => sum + (s.totalTokens || 0), 0);
+    const sessions = await readSessionsFromFiles();
+    const totalTokens = sessions.reduce((sum, s) => sum + (s.tokens || 0), 0);
     
     const stats = {
       totalTokens,
       sessions: sessions.length,
       lastUpdated: new Date().toISOString(),
-      history: sessions.map((s: any) => ({
+      history: sessions.map((s) => ({
         key: s.key,
-        tokens: s.totalTokens || 0,
+        tokens: s.tokens || 0,
         model: s.model,
         updatedAt: s.updatedAt
       }))
@@ -111,11 +129,8 @@ export async function updateTokenStats(tokens?: number): Promise<{ addedTokens: 
   try {
     const oldStats = await readStatsFile();
     
-    const output = await execCommand('openclaw sessions --all-agents --json 2>/dev/null');
-    const data = JSON.parse(output);
-    
-    const sessions = data.sessions || [];
-    const currentTotal = sessions.reduce((sum: number, s: any) => sum + (s.totalTokens || 0), 0);
+    const sessions = await readSessionsFromFiles();
+    const currentTotal = sessions.reduce((sum, s) => sum + (s.tokens || 0), 0);
     
     const addedTokens = currentTotal - oldStats.totalTokens;
     
@@ -123,9 +138,9 @@ export async function updateTokenStats(tokens?: number): Promise<{ addedTokens: 
       totalTokens: currentTotal,
       sessions: sessions.length,
       lastUpdated: new Date().toISOString(),
-      history: sessions.map((s: any) => ({
+      history: sessions.map((s) => ({
         key: s.key,
-        tokens: s.totalTokens || 0,
+        tokens: s.tokens || 0,
         model: s.model,
         updatedAt: s.updatedAt
       })),
@@ -148,15 +163,13 @@ export async function updateTokenStats(tokens?: number): Promise<{ addedTokens: 
 // 获取当前统计
 export async function getTokenStats(): Promise<{ totalTokens: number; sessions: number; lastUpdated: string }> {
   try {
-    const content = await readFile(STATS_FILE, 'utf-8');
-    const stats = JSON.parse(content);
+    const stats = await readStatsFile();
     return {
       totalTokens: stats.totalTokens,
       sessions: stats.sessions,
-      lastUpdated: stats.lastUpdated
+      lastUpdated: stats.lastUpdated,
     };
   } catch {
-    // 如果没有初始数据，先初始化
-    return initTokenStats();
+    return { totalTokens: 0, sessions: 0, lastUpdated: '' };
   }
 }

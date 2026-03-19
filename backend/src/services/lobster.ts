@@ -1,10 +1,52 @@
 import { readFile, stat, readdir } from 'fs/promises';
 import { join } from 'path';
-import { spawn } from 'child_process';
 import { getModelBrainMapping, getModelDescription, type ModelBrainMapping } from './modelMapper';
 import { getMemoryScore as getMemoryScoreDetail, type MemoryAgentScore, type MemoryLayerScore } from './memoryScore';
+import { analyzeMemory } from './memoryAnalyzer';
 
 const OPENCLAW_DIR = '/Users/moltbot/.openclaw';
+
+// 缓存记忆（5分钟）
+let ageCache: { value: number; expireAt: number } | null = null;
+async function getAge(): Promise<number> {
+  if (ageCache && Date.now() < ageCache.expireAt) {
+    return ageCache.value;
+  }
+  
+  const DAY_MS = 1000 * 60 * 60 * 24;
+  try {
+    const memoryDir = join(OPENCLAW_DIR, 'workspace/memory');
+    let earliestMemoryMs = NaN;
+    try {
+      const files = await readdir(memoryDir);
+      for (const file of files) {
+        if (file.endsWith('.md') && !file.startsWith('.')) {
+          const filePath = join(memoryDir, file);
+          const fileStat = await stat(filePath);
+          if (!Number.isFinite(earliestMemoryMs) || fileStat.birthtime.getTime() < earliestMemoryMs) {
+            earliestMemoryMs = fileStat.birthtime.getTime();
+          }
+        }
+      }
+    } catch {}
+    
+    const configPath = join(OPENCLAW_DIR, 'openclaw.json');
+    let configCreatedMs = NaN;
+    try {
+      const configStat = await stat(configPath);
+      configCreatedMs = configStat.birthtime.getTime();
+    } catch {}
+    
+    const candidates = [earliestMemoryMs, configCreatedMs].filter((t) => Number.isFinite(t));
+    if (candidates.length > 0) {
+      const earliestMs = Math.min(...candidates);
+      const age = Math.max(0, Math.floor((Date.now() - earliestMs) / DAY_MS));
+      ageCache = { value: age, expireAt: Date.now() + 5 * 60 * 1000 };
+      return age;
+    }
+  } catch {}
+  return 0;
+}
 
 export interface Brain {
   cerebral: number;
@@ -75,28 +117,37 @@ export interface LobsterStats {
   };
 }
 
-function execCommand(cmd: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const child = spawn('bash', ['-c', cmd], { 
-      cwd: '/Users/moltbot',
-      env: { ...process.env, PATH: '/opt/homebrew/bin:/usr/local/bin:' + process.env.PATH }
-    });
-    let output = '';
-    child.stdout.on('data', (data) => output += data);
-    child.stderr.on('data', (data) => output += data);
-    child.on('close', (code) => resolve(output));
-    child.on('error', reject);
-  });
-}
-
 async function getTokenStats(): Promise<{ totalTokens: number; totalSessions: number }> {
   try {
-    const output = await execCommand('openclaw sessions --all-agents --json 2>/dev/null');
-    const data = JSON.parse(output);
-    const totalTokens = data.sessions?.reduce((sum: number, s: any) => sum + (s.totalTokens || 0), 0) || 0;
-    const totalSessions = data.count || 0;
+    // 直接读取所有 agent 的会话文件，避免调用 openclaw CLI
+    const agentsDir = join(OPENCLAW_DIR, 'agents');
+    const agentDirs = await readdir(agentsDir, { withFileTypes: true });
+    
+    let totalTokens = 0;
+    let totalSessions = 0;
+    
+    for (const agentDir of agentDirs) {
+      if (!agentDir.isDirectory()) continue;
+      
+      const sessionsFile = join(agentsDir, agentDir.name, 'sessions', 'sessions.json');
+      try {
+        const content = await readFile(sessionsFile, 'utf-8');
+        const sessions = JSON.parse(content);
+        
+        for (const session of Object.values(sessions)) {
+          const s = session as any;
+          totalTokens += s.tokenUsage?.total || s.tokens?.total || 0;
+          totalSessions++;
+        }
+      } catch {
+        // 文件不存在或解析失败，跳过
+      }
+    }
+    
     return { totalTokens, totalSessions };
-  } catch { return { totalTokens: 0, totalSessions: 0 }; }
+  } catch { 
+    return { totalTokens: 0, totalSessions: 0 }; 
+  }
 }
 
 async function getOpenClawConfig(): Promise<{ name: string; avatar: string; personality: string }> {
@@ -112,57 +163,20 @@ async function getOpenClawConfig(): Promise<{ name: string; avatar: string; pers
   } catch { return { name: 'ZenClaw', avatar: '🦞', personality: '聪明、可靠、幽默' }; }
 }
 
-async function getAge(): Promise<number> {
-  const DAY_MS = 1000 * 60 * 60 * 24;
-  try {
-    // 查找最早的记忆文件时间
-    const memoryDir = join(OPENCLAW_DIR, 'workspace/memory');
-    let earliestMemoryMs = NaN;
-    try {
-      const files = await readdir(memoryDir);
-      for (const file of files) {
-        if (file.endsWith('.md') && !file.startsWith('.')) {
-          const filePath = join(memoryDir, file);
-          const fileStat = await stat(filePath);
-          if (!Number.isFinite(earliestMemoryMs) || fileStat.birthtime.getTime() < earliestMemoryMs) {
-            earliestMemoryMs = fileStat.birthtime.getTime();
-          }
-        }
-      }
-    } catch {}
-    
-    // 也检查配置文件
-    const configPath = join(OPENCLAW_DIR, 'openclaw.json');
-    let configCreatedMs = NaN;
-    try {
-      const configStat = await stat(configPath);
-      configCreatedMs = configStat.birthtime.getTime();
-    } catch {}
-    
-    const candidates = [earliestMemoryMs, configCreatedMs].filter((t) => Number.isFinite(t));
-    if (candidates.length > 0) {
-      const earliestMs = Math.min(...candidates);
-      return Math.max(0, Math.floor((Date.now() - earliestMs) / DAY_MS));
-    }
-  } catch {}
-  return 0;
-}
-
-async function getSkillCount(): Promise<number> {
-  try {
-    const { readdir } = await import('fs/promises');
-    const skillsDir = join(OPENCLAW_DIR, 'skills');
-    const files = await readdir(skillsDir);
-    return files.filter(f => !f.startsWith('.') && f !== 'README.md').length;
-  } catch { return 0; }
-}
-
 async function getMemoryFileCount(): Promise<number> {
   try {
     const { readdir } = await import('fs/promises');
     const memoryDir = join(OPENCLAW_DIR, 'workspace', 'memory');
     const files = await readdir(memoryDir, { recursive: true });
     return files.length;
+  } catch { return 0; }
+}
+
+async function getSkillCount(): Promise<number> {
+  try {
+    const skillsDir = join(OPENCLAW_DIR, 'skills');
+    const entries = await readdir(skillsDir, { withFileTypes: true });
+    return entries.filter(e => e.isDirectory()).length;
   } catch { return 0; }
 }
 
@@ -279,5 +293,3 @@ export async function getLobsterStats(): Promise<LobsterStats> {
   };
 }
 export async function getLobsterNews() { return []; }
-
-import { analyzeMemory } from './memoryAnalyzer';

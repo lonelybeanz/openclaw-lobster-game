@@ -544,5 +544,51 @@
         "error": "no results"
       }
     ]
+  },
+  {
+    "runAt": "2026-03-18T07:05:33.606Z",
+    "durationMs": 45555,
+    "totalCases": 3,
+    "passedCases": 0,
+    "accuracyRate": 0,
+    "averageLatencyMs": 15185,
+    "results": [
+      {
+        "id": "dev-memory",
+        "agentId": "dev",
+        "query": "memory",
+        "latencyMs": 11980,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "evaluationMethod": "llm",
+        "evaluationReason": "no results",
+        "error": "no results"
+      },
+      {
+        "id": "dev-task",
+        "agentId": "dev",
+        "query": "task",
+        "latencyMs": 13469,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "evaluationMethod": "llm",
+        "evaluationReason": "no results",
+        "error": "no results"
+      },
+      {
+        "id": "dev-config",
+        "agentId": "dev",
+        "query": "config",
+        "latencyMs": 20105,
+        "hitCount": 0,
+        "passed": false,
+        "matchedExpectation": false,
+        "evaluationMethod": "llm",
+        "evaluationReason": "no results",
+        "error": "no results"
+      }
+    ]
   }
 ]

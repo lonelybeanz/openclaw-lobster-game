@@ -1,6 +1,5 @@
-import { readdir } from 'fs/promises';
+import { readdir, readFile } from 'fs/promises';
 import { join } from 'path';
-import { spawn } from 'child_process';
 
 const OPENCLAW_DIR = '/Users/moltbot/.openclaw';
 
@@ -13,40 +12,34 @@ export interface OpenClawPromptStats {
   updatedAt: string;
 }
 
-function execCommand(cmd: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const child = spawn('bash', ['-c', cmd], {
-      cwd: '/Users/moltbot',
-      env: { ...process.env, PATH: '/opt/homebrew/bin:/usr/local/bin:' + process.env.PATH }
-    });
-
-    let output = '';
-    child.stdout.on('data', (data) => {
-      output += data;
-    });
-    child.stderr.on('data', (data) => {
-      output += data;
-    });
-    child.on('close', () => {
-      resolve(output);
-    });
-    child.on('error', reject);
-  });
-}
-
+// 直接从文件读取所有 agent 的会话数据
 async function getTokenAndSessionStats(): Promise<{ tokens: number; sessions: number }> {
   try {
-    const output = await execCommand('openclaw sessions --all-agents --json 2>/dev/null');
-    const data = JSON.parse(output);
-    const sessions = Array.isArray(data.sessions) ? data.sessions : [];
-    const tokens = sessions.reduce((sum: number, session: any) => {
-      return sum + (Number(session?.totalTokens) || 0);
-    }, 0);
-
-    return {
-      tokens,
-      sessions: Number(data.count) || sessions.length,
-    };
+    const agentsDir = join(OPENCLAW_DIR, 'agents');
+    const agentDirs = await readdir(agentsDir, { withFileTypes: true });
+    
+    let tokens = 0;
+    let sessions = 0;
+    
+    for (const agentDir of agentDirs) {
+      if (!agentDir.isDirectory()) continue;
+      
+      const sessionsFile = join(agentsDir, agentDir.name, 'sessions', 'sessions.json');
+      try {
+        const content = await readFile(sessionsFile, 'utf-8');
+        const data = JSON.parse(content);
+        
+        for (const session of Object.values(data)) {
+          const s = session as any;
+          tokens += s.tokenUsage?.total || s.tokens?.total || 0;
+          sessions++;
+        }
+      } catch {
+        // 文件不存在或解析失败，跳过
+      }
+    }
+    
+    return { tokens, sessions };
   } catch {
     return { tokens: 0, sessions: 0 };
   }

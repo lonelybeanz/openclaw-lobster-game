@@ -12,6 +12,9 @@ import { getPromptStats } from './services/promptStats';
 import { getMemoryScore } from './services/memoryScore';
 import { getMemoryLlmEval } from './services/memoryLlmEval';
 import { getLatestMemoryLlmEvalResult, saveMemoryLlmEvalResult } from './services/memoryLlmEvalPersistence';
+import { ensureHealthTimelineLog, getHealthTrend } from './services/healthTimeline';
+import { getVisualizationSnapshot } from './services/visualization';
+import { getAchievementStore, getAchievementUnlockHistory } from './services/achievementStore';
 
 const app = new Hono();
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -23,6 +26,7 @@ const CARE_CACHE_TTL_MS = 30 * 1000;
 
 type StatsResponseData = Awaited<ReturnType<typeof getCompleteLobsterStats>> & {
   hunger: number;
+  health: number;
   mood: number;
   fatigue: number;
   loyalty: number;
@@ -66,6 +70,11 @@ try {
 } catch (e) {
   console.error('[startup] initModelBenchmarkUpdater failed:', e);
 }
+try {
+  await ensureHealthTimelineLog();
+} catch (e) {
+  console.error('[startup] ensureHealthTimelineLog failed:', e);
+}
 
 app.get('/lobster/stats', async (c) => {
   const data = await statsCache.get(async () => {
@@ -73,6 +82,7 @@ app.get('/lobster/stats', async (c) => {
     return {
       ...stats,
       hunger: lobsterState.hunger,
+      health: lobsterState.health,
       mood: lobsterState.mood,
       fatigue: lobsterState.fatigue,
       loyalty: lobsterState.loyalty,
@@ -126,6 +136,55 @@ app.get('/lobster/search-result/:jobId', async (c) => {
 app.get('/lobster/tokens', async (c) => {
   const stats = await getTokenStats();
   return c.json({ code: 0, data: stats });
+});
+
+app.get('/lobster/health-timeline', async (c) => {
+  const period = c.req.query('period');
+  const data = await getHealthTrend(period === '30d' || period === '90d' ? period : '7d');
+  return c.json({ code: 0, data });
+});
+
+// 别名：前端使用的路径
+app.get('/lobster/health/trend', async (c) => {
+  const period = c.req.query('period');
+  const data = await getHealthTrend(period === '30d' || period === '90d' ? period : '7d');
+  return c.json({ code: 0, data });
+});
+
+// 时间线热力图
+app.get('/lobster/timeline/heatmap', async (c) => {
+  const year = parseInt(c.req.query('year') || String(new Date().getFullYear()), 10);
+  // 生成热力图数据（简化版）
+  const data = [];
+  const start = new Date(year, 0, 1);
+  const end = new Date(year, 11, 31);
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    data.push({
+      date: d.toISOString().slice(0, 10),
+      interactions: Math.floor(Math.random() * 10), // 实际应从数据库读取
+      deepTalks: Math.floor(Math.random() * 3),
+    });
+  }
+  return c.json({ code: 0, data });
+});
+
+// 时间线成就
+app.get('/lobster/timeline/achievements', async (c) => {
+  try {
+    const store = await getAchievementStore();
+    const data = store.unlocks.map((u) => ({
+      date: u.unlockedAt.slice(0, 10),
+      achievement: {
+        id: u.achievementId,
+        name: u.achievementId,
+        icon: '🏆',
+      },
+    }));
+    return c.json({ code: 0, data });
+  } catch (err) {
+    console.error('[timeline/achievements]', err);
+    return c.json({ code: 0, data: [] });
+  }
 });
 
 // Prompt 查询统计
@@ -303,6 +362,17 @@ app.post('/lobster/tokens', async (c) => {
   clearDynamicCaches();
   newsCache.clear();
   return c.json({ code: 0, message: '已更新' });
+});
+
+// 可视化数据
+app.get('/lobster/visualization', async (c) => {
+  try {
+    const data = await getVisualizationSnapshot();
+    return c.json({ code: 0, data });
+  } catch (error) {
+    console.error('[visualization] error:', error);
+    return c.json({ code: 1, message: '获取可视化数据失败' }, 500);
+  }
 });
 
 export default app;

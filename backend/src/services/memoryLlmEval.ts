@@ -1,9 +1,8 @@
-import { spawn } from 'child_process';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { runOpenClawAgentPrompt } from './openclaw';
 
-const OPENCLAW_BIN = '/Users/moltbot/.nvm/versions/node/v22.22.0/bin/openclaw';
+const OPENCLAW_CONFIG = '/Users/moltbot/.openclaw/openclaw.json';
 const EVAL_AGENT_ID = process.env.OPENCLAW_MEMORY_AGENT ?? 'dev';
 const CORE_FILES = ['SOUL.md', 'AGENTS.md', 'USER.md', 'MEMORY.md'] as const;
 const MAX_FILE_CHARS = 6000;
@@ -123,50 +122,25 @@ function normalizeEvaluation(value: {
   };
 }
 
-function runCommand(args: string[], timeoutMs = COMMAND_TIMEOUT_MS): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(OPENCLAW_BIN, args, {
-      cwd: process.cwd(),
-      env: {
-        ...process.env,
-        PATH: '/Users/moltbot/.nvm/versions/node/v22.22.0/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin',
-        HOME: '/Users/moltbot',
-      },
-    });
-    let stdout = '';
-    let stderr = '';
-    const timer = setTimeout(() => {
-      child.kill('SIGTERM');
-      reject(new Error('timeout'));
-    }, timeoutMs);
-
-    child.stdout?.on('data', (chunk) => {
-      stdout += String(chunk);
-    });
-    child.stderr?.on('data', (chunk) => {
-      stderr += String(chunk);
-    });
-    child.on('close', (code) => {
-      clearTimeout(timer);
-      if (code === 0) {
-        resolve(`${stderr}${stdout}`.trim());
-        return;
-      }
-      reject(new Error(`${stderr}${stdout}`.trim() || `exit ${code}`));
-    });
-    child.on('error', (error) => {
-      clearTimeout(timer);
-      reject(error);
-    });
-  });
-}
-
+// 直接从配置文件读取 agent 列表，避免调用 CLI
 async function listAgents(): Promise<OpenClawAgentListItem[]> {
-  const raw = await runCommand(['agents', 'list', '--json']);
-  const parsed = parseJsonPayload<OpenClawAgentListItem[]>(raw);
-  return Array.isArray(parsed)
-    ? parsed.filter((item): item is OpenClawAgentListItem => Boolean(item?.id) && typeof item.workspace === 'string')
-    : [];
+  try {
+    const content = await readFile(OPENCLAW_CONFIG, 'utf-8');
+    const config = JSON.parse(content);
+    const agents = config?.agents?.list || [];
+    
+    return agents
+      .filter((item: any) => Boolean(item?.id) && typeof item.workspace === 'string')
+      .map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        identityName: item.identity?.name || item.identityName,
+        workspace: item.workspace,
+      }));
+  } catch (error) {
+    console.error('[memoryLlmEval] Failed to read agents from config:', error);
+    return [];
+  }
 }
 
 async function readCoreFile(workspaceRoot: string, fileName: string): Promise<CoreFileEval> {

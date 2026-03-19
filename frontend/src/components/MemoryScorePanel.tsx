@@ -226,8 +226,8 @@ export default function MemoryScorePanel({
             </div>
             {agent.issues.length > 0 ? (
               <div className="memory-issue-list">
-                {agent.issues.map((issue) => (
-                  <span key={`${agent.agentId}-${issue}`}>{issue}</span>
+                {agent.issues.map((issue, idx) => (
+                  <span key={`${agent.agentId}-issue-${idx}`}>{issue}</span>
                 ))}
               </div>
             ) : null}

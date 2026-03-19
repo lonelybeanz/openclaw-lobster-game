@@ -4,6 +4,24 @@ import { join } from 'path';
 const WORKSPACE_ROOT = process.env.OPENCLAW_MEMORY_WORKSPACE ?? '/Users/moltbot/.openclaw/workspace-dev';
 const MEMORY_DIR = join(WORKSPACE_ROOT, 'memory');
 
+// 缓存记忆分析结果（5分钟）
+const memoryAnalyzerCache = createTtlCache<MemoryStats>(5 * 60 * 1000);
+
+// 简单内存缓存实现
+function createTtlCache<T>(ttlMs: number): { get: (fn: () => Promise<T>) => Promise<T> } {
+  let cached: { value: T; expireAt: number } | null = null;
+  return {
+    get: async (fn: () => Promise<T>) => {
+      if (cached && Date.now() < cached.expireAt) {
+        return cached.value;
+      }
+      const value = await fn();
+      cached = { value, expireAt: Date.now() + ttlMs };
+      return value;
+    }
+  };
+}
+
 export interface MemoryStats {
   // 浅层记忆 - 最近几天
   shallowCount: number;      // 日记数量
@@ -61,87 +79,89 @@ async function getFileAge(path: string): Promise<number> {
 }
 
 export async function analyzeMemory(): Promise<MemoryStats> {
-  const stats: MemoryStats = {
-    shallowCount: 0,
-    shallowQuality: 0,
-    shallowRecent: [],
-    deepCount: 0,
-    deepQuality: 0,
-    deepFiles: [],
-    totalFiles: 0,
-    totalSize: 0,
-    organization: 0,
-    completeness: 0,
-  };
-  
-  try {
-    const files = await readdir(MEMORY_DIR, { recursive: true });
-    const allFiles = files.filter(f => 
-      typeof f === 'string' && 
-      (f.endsWith('.md') || f.endsWith('.json'))
-    );
+  return memoryAnalyzerCache.get(async () => {
+    const stats: MemoryStats = {
+      shallowCount: 0,
+      shallowQuality: 0,
+      shallowRecent: [],
+      deepCount: 0,
+      deepQuality: 0,
+      deepFiles: [],
+      totalFiles: 0,
+      totalSize: 0,
+      organization: 0,
+      completeness: 0,
+    };
     
-    stats.totalFiles = allFiles.length;
-    
-    // 分析浅层记忆（日期文件）
-    const dateFiles = allFiles.filter(f => /\d{4}-\d{2}-\d{2}/.test(f));
-    stats.shallowCount = dateFiles.length;
-    
-    // 获取最近7天的记忆
-    const recentDates: string[] = [];
-    let shallowQualitySum = 0;
-    
-    for (const file of dateFiles.slice(0, 7)) {
-      try {
-        const filePath = join(MEMORY_DIR, file);
-        const content = await readFile(filePath, 'utf-8');
-        const quality = evaluateFile(content);
-        shallowQualitySum += quality;
-        
-        const age = await getFileAge(filePath);
-        if (age < 7) {
-          recentDates.push(file.toString().replace('.md', ''));
-        }
-      } catch {}
+    try {
+      const files = await readdir(MEMORY_DIR, { recursive: true });
+      const allFiles = files.filter(f => 
+        typeof f === 'string' && 
+        (f.endsWith('.md') || f.endsWith('.json'))
+      );
+      
+      stats.totalFiles = allFiles.length;
+      
+      // 分析浅层记忆（日期文件）
+      const dateFiles = allFiles.filter(f => /\d{4}-\d{2}-\d{2}/.test(f));
+      stats.shallowCount = dateFiles.length;
+      
+      // 获取最近7天的记忆
+      const recentDates: string[] = [];
+      let shallowQualitySum = 0;
+      
+      for (const file of dateFiles.slice(0, 7)) {
+        try {
+          const filePath = join(MEMORY_DIR, file);
+          const content = await readFile(filePath, 'utf-8');
+          const quality = evaluateFile(content);
+          shallowQualitySum += quality;
+          
+          const age = await getFileAge(filePath);
+          if (age < 7) {
+            recentDates.push(file.toString().replace('.md', ''));
+          }
+        } catch {}
+      }
+      
+      stats.shallowQuality = dateFiles.length > 0 ? Math.floor(shallowQualitySum / Math.min(dateFiles.length, 7)) : 50;
+      stats.shallowRecent = recentDates.sort().slice(-5);
+      
+      // 分析深层记忆（核心文件）
+      const coreFiles = ['MEMORY.md', 'USER.md', 'SOUL.md', 'AGENTS.md'];
+      let deepQualitySum = 0;
+      
+      for (const coreFile of coreFiles) {
+        try {
+          const filePath = join(WORKSPACE_ROOT, coreFile);
+          const content = await readFile(filePath, 'utf-8');
+          const quality = evaluateFile(content);
+          deepQualitySum += quality;
+          stats.deepFiles.push(coreFile);
+        } catch {}
+      }
+      
+      stats.deepCount = stats.deepFiles.length;
+      stats.deepQuality = coreFiles.length > 0 ? Math.floor(deepQualitySum / coreFiles.length) : 50;
+      
+      // 计算总体评分
+      stats.organization = Math.min(100, Math.floor(
+        (stats.shallowQuality * 0.3) + 
+        (stats.deepQuality * 0.4) + 
+        (Math.min(100, stats.totalFiles * 10) * 0.3)
+      ));
+      
+      // 完整度评估
+      const rootFiles = await readdir(WORKSPACE_ROOT);
+      const hasMemory = rootFiles.includes('MEMORY.md');
+      const hasUser = rootFiles.includes('USER.md');
+      const hasSoul = rootFiles.includes('SOUL.md');
+      stats.completeness = Math.floor(((hasMemory ? 30 : 0) + (hasUser ? 30 : 0) + (hasSoul ? 40 : 0)));
+      
+    } catch (e) {
+      console.error('Memory analysis error:', e);
     }
     
-    stats.shallowQuality = dateFiles.length > 0 ? Math.floor(shallowQualitySum / Math.min(dateFiles.length, 7)) : 50;
-    stats.shallowRecent = recentDates.sort().slice(-5);
-    
-    // 分析深层记忆（核心文件）
-    const coreFiles = ['MEMORY.md', 'USER.md', 'SOUL.md', 'AGENTS.md'];
-    let deepQualitySum = 0;
-    
-    for (const coreFile of coreFiles) {
-      try {
-        const filePath = join(WORKSPACE_ROOT, coreFile);
-        const content = await readFile(filePath, 'utf-8');
-        const quality = evaluateFile(content);
-        deepQualitySum += quality;
-        stats.deepFiles.push(coreFile);
-      } catch {}
-    }
-    
-    stats.deepCount = stats.deepFiles.length;
-    stats.deepQuality = coreFiles.length > 0 ? Math.floor(deepQualitySum / coreFiles.length) : 50;
-    
-    // 计算总体评分
-    stats.organization = Math.min(100, Math.floor(
-      (stats.shallowQuality * 0.3) + 
-      (stats.deepQuality * 0.4) + 
-      (Math.min(100, stats.totalFiles * 10) * 0.3)
-    ));
-    
-    // 完整度评估
-    const rootFiles = await readdir(WORKSPACE_ROOT);
-    const hasMemory = rootFiles.includes('MEMORY.md');
-    const hasUser = rootFiles.includes('USER.md');
-    const hasSoul = rootFiles.includes('SOUL.md');
-    stats.completeness = Math.floor(((hasMemory ? 30 : 0) + (hasUser ? 30 : 0) + (hasSoul ? 40 : 0)));
-    
-  } catch (e) {
-    console.error('Memory analysis error:', e);
-  }
-  
-  return stats;
+    return stats;
+  });
 }

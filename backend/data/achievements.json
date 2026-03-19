@@ -1,0 +1,295 @@
+{
+  "version": "1.0",
+  "updatedAt": "2026-03-19T10:00:00Z",
+  "definitions": [
+    {
+      "id": "first_meet",
+      "name": "初心萌动",
+      "description": "首次相遇，开启养成之旅",
+      "icon": "👋",
+      "category": "milestone",
+      "condition": { "type": "first_meet" },
+      "order": 1
+    },
+    {
+      "id": "first_feed",
+      "name": "第一次投喂",
+      "description": "第一次为小龙虾准备食物",
+      "icon": "🍤",
+      "category": "milestone",
+      "condition": { "type": "exists", "stat": "lastFed" },
+      "order": 2
+    },
+    {
+      "id": "first_train",
+      "name": "第一次训练",
+      "description": "第一次进行训练互动",
+      "icon": "💪",
+      "category": "milestone",
+      "condition": { "type": "exists", "stat": "lastTrained" },
+      "order": 3
+    },
+    {
+      "id": "first_rest",
+      "name": "第一次休息",
+      "description": "第一次让小龙虾好好休息",
+      "icon": "😴",
+      "category": "milestone",
+      "condition": { "type": "exists", "stat": "lastRested" },
+      "order": 4
+    },
+    {
+      "id": "consecutive_3",
+      "name": "三日之约",
+      "description": "连续 3 天陪伴",
+      "icon": "🗓️",
+      "category": "milestone",
+      "condition": { "type": "stat_gte", "stat": "consecutiveDays", "value": 3 },
+      "order": 5
+    },
+    {
+      "id": "consecutive_7",
+      "name": "一周伙伴",
+      "description": "连续 7 天陪伴",
+      "icon": "🌟",
+      "category": "milestone",
+      "condition": { "type": "stat_gte", "stat": "consecutiveDays", "value": 7 },
+      "order": 6
+    },
+    {
+      "id": "consecutive_14",
+      "name": "半月同频",
+      "description": "连续 14 天陪伴",
+      "icon": "🧭",
+      "category": "milestone",
+      "condition": { "type": "stat_gte", "stat": "consecutiveDays", "value": 14 },
+      "order": 7
+    },
+    {
+      "id": "challenge_1",
+      "name": "进化之路",
+      "description": "完成第一个挑战",
+      "icon": "🎯",
+      "category": "milestone",
+      "condition": { "type": "stat_gte", "stat": "challengesCompleted", "value": 1 },
+      "order": 8
+    },
+    {
+      "id": "challenge_5",
+      "name": "挑战达人",
+      "description": "完成 5 个挑战",
+      "icon": "⚔️",
+      "category": "milestone",
+      "condition": { "type": "stat_gte", "stat": "challengesCompleted", "value": 5 },
+      "order": 9
+    },
+    {
+      "id": "brain_neurons_100",
+      "name": "最强大脑",
+      "description": "神经元达到 100",
+      "icon": "🧠",
+      "category": "brain",
+      "condition": { "type": "stat_gte", "stat": "brain.neurons", "value": 100 },
+      "order": 10
+    },
+    {
+      "id": "brain_long_term_80",
+      "name": "记忆超群",
+      "description": "长期记忆达到 80",
+      "icon": "💾",
+      "category": "brain",
+      "condition": { "type": "stat_gte", "stat": "brain.longTerm", "value": 80 },
+      "order": 11
+    },
+    {
+      "id": "brain_memory_org_80",
+      "name": "井井有条",
+      "description": "记忆组织度达到 80",
+      "icon": "📚",
+      "category": "brain",
+      "condition": { "type": "stat_gte", "stat": "memory.organization", "value": 80 },
+      "order": 12
+    },
+    {
+      "id": "skill_3",
+      "name": "三板斧",
+      "description": "拥有 3 个技能",
+      "icon": "🪓",
+      "category": "skill",
+      "condition": { "type": "stat_gte", "stat": "skills", "value": 3 },
+      "order": 20
+    },
+    {
+      "id": "skill_10",
+      "name": "十项全能",
+      "description": "拥有 10 个技能",
+      "icon": "🏆",
+      "category": "skill",
+      "condition": { "type": "stat_gte", "stat": "skills", "value": 10 },
+      "order": 21
+    },
+    {
+      "id": "skill_level_10",
+      "name": "熟练进化",
+      "description": "等级达到 10",
+      "icon": "🐉",
+      "category": "skill",
+      "condition": { "type": "stat_gte", "stat": "level", "value": 10 },
+      "order": 22
+    },
+    {
+      "id": "explore_age_7",
+      "name": "一周目",
+      "description": "陪伴满 7 天",
+      "icon": "📅",
+      "category": "explore",
+      "condition": { "type": "stat_gte", "stat": "age", "value": 7 },
+      "order": 30
+    },
+    {
+      "id": "explore_age_30",
+      "name": "一月游",
+      "description": "陪伴满 30 天",
+      "icon": "🗓️",
+      "category": "explore",
+      "condition": { "type": "stat_gte", "stat": "age", "value": 30 },
+      "order": 31
+    },
+    {
+      "id": "midnight_1",
+      "name": "夜猫子",
+      "description": "首次深夜陪伴",
+      "icon": "🌙",
+      "category": "explore",
+      "condition": { "type": "stat_gte", "stat": "midnightCount", "value": 1 },
+      "order": 32
+    },
+    {
+      "id": "midnight_5",
+      "name": "深夜守护者",
+      "description": "累计 5 次深夜陪伴",
+      "icon": "🌃",
+      "category": "explore",
+      "condition": { "type": "stat_gte", "stat": "midnightCount", "value": 5 },
+      "order": 33
+    },
+    {
+      "id": "memory_10",
+      "name": "过目不忘",
+      "description": "浅层记忆文件达到 10 个",
+      "icon": "🧠",
+      "category": "explore",
+      "condition": { "type": "stat_gte", "stat": "memory.shallow.count", "value": 10 },
+      "order": 34
+    },
+    {
+      "id": "memory_50",
+      "name": "记忆大师",
+      "description": "浅层记忆文件达到 50 个",
+      "icon": "📚",
+      "category": "explore",
+      "condition": { "type": "stat_gte", "stat": "memory.shallow.count", "value": 50 },
+      "order": 35
+    },
+    {
+      "id": "social_sessions_10",
+      "name": "社交达人",
+      "description": "完成 10 次会话",
+      "icon": "💬",
+      "category": "social",
+      "condition": { "type": "stat_gte", "stat": "totalSessions", "value": 10 },
+      "order": 40
+    },
+    {
+      "id": "social_sessions_50",
+      "name": "话痨小龙虾",
+      "description": "完成 50 次会话",
+      "icon": "🗣️",
+      "category": "social",
+      "condition": { "type": "stat_gte", "stat": "totalSessions", "value": 50 },
+      "order": 41
+    },
+    {
+      "id": "interact_10",
+      "name": "互动达人",
+      "description": "完成 10 次养成互动",
+      "icon": "🤝",
+      "category": "social",
+      "condition": { "type": "stat_gte", "stat": "totalInteractions", "value": 10 },
+      "order": 42
+    },
+    {
+      "id": "interact_50",
+      "name": "默契升级",
+      "description": "完成 50 次养成互动",
+      "icon": "💞",
+      "category": "social",
+      "condition": { "type": "stat_gte", "stat": "totalInteractions", "value": 50 },
+      "order": 43
+    },
+    {
+      "id": "interact_100",
+      "name": "元老伙伴",
+      "description": "完成 100 次养成互动",
+      "icon": "🏅",
+      "category": "social",
+      "condition": { "type": "stat_gte", "stat": "totalInteractions", "value": 100 },
+      "order": 44
+    },
+    {
+      "id": "deep_talk_1",
+      "name": "灵智初开",
+      "description": "首次深度对话",
+      "icon": "🧠",
+      "category": "social",
+      "condition": { "type": "stat_gte", "stat": "deepTalkCount", "value": 1 },
+      "order": 45
+    },
+    {
+      "id": "deep_talk_5",
+      "name": "知心伙伴",
+      "description": "累计 5 次深度对话",
+      "icon": "✨",
+      "category": "social",
+      "condition": { "type": "stat_gte", "stat": "deepTalkCount", "value": 5 },
+      "order": 46
+    },
+    {
+      "id": "deep_talk_20",
+      "name": "心流共鸣",
+      "description": "累计 20 次深度对话",
+      "icon": "🌌",
+      "category": "social",
+      "condition": { "type": "stat_gte", "stat": "deepTalkCount", "value": 20 },
+      "order": 47
+    },
+    {
+      "id": "loyalty_100",
+      "name": "忠诚满分",
+      "description": "忠诚度达到 100",
+      "icon": "❤️",
+      "category": "social",
+      "condition": { "type": "stat_gte", "stat": "loyalty", "value": 100 },
+      "order": 48
+    },
+    {
+      "id": "tokens_100k",
+      "name": "挥霍如雨",
+      "description": "累计消耗 100K tokens",
+      "icon": "💰",
+      "category": "social",
+      "condition": { "type": "stat_gte", "stat": "totalTokens", "value": 100000 },
+      "order": 49
+    },
+    {
+      "id": "tokens_500k",
+      "name": "富甲一方",
+      "description": "累计消耗 500K tokens",
+      "icon": "💎",
+      "category": "social",
+      "condition": { "type": "stat_gte", "stat": "totalTokens", "value": 500000 },
+      "order": 50
+    }
+  ],
+  "unlocks": []
+}

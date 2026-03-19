@@ -2,6 +2,7 @@ import { readdir, readFile, writeFile, mkdir, stat } from 'fs/promises';
 import { basename, join } from 'path';
 import { spawn } from 'child_process';
 import { runOpenClawAgentPrompt } from './openclaw';
+import { createTtlCache } from './cache';
 
 const OPENCLAW_BIN = '/Users/moltbot/.nvm/versions/node/v22.22.0/bin/openclaw';
 const WORKSPACE_ROOT = process.env.OPENCLAW_MEMORY_WORKSPACE ?? '/Users/moltbot/.openclaw/workspace-dev';
@@ -14,6 +15,10 @@ const COMMAND_TIMEOUT_MS = 30_000;
 const DEFAULT_TEST_INTERVAL_MINUTES = 180;
 const MAX_HISTORY_DAYS = 90;
 const MAX_REPORTS = 50;
+
+// 缓存记忆评分结果（5分钟）
+const memoryScoreCache = createTtlCache<MemoryScoreResponse>(5 * 60 * 1000);
+const memoryIndexCache = createTtlCache<AgentIndexStatus[]>(5 * 60 * 1000);
 
 type RawMemoryStatus = {
   agentId: string;
@@ -335,50 +340,39 @@ function getAgentIndexScore(agent: Omit<AgentIndexStatus, 'score'>) {
 }
 
 export async function getMemoryIndexStatuses(): Promise<AgentIndexStatus[]> {
-  try {
-    const output = await runCommand(['memory', 'status', '--json']);
-    const rawStatuses = parseJsonPayload<RawMemoryStatus[]>(output, []);
-    return rawStatuses.map((item) => {
-      const memorySource = item.status?.sourceCounts?.find((source) => source.source === 'memory');
-      const sessionSource = item.status?.sourceCounts?.find((source) => source.source === 'sessions');
-      const base = {
-        agentId: item.agentId,
-        workspaceDir: item.status?.workspaceDir ?? '',
-        backend: item.status?.backend ?? item.status?.provider ?? 'unknown',
-        vectorReady: Boolean(item.status?.vector?.enabled && item.status?.vector?.available),
-        indexedFiles: item.status?.files ?? 0,
-        indexedChunks: item.status?.chunks ?? 0,
-        memorySourceFiles: memorySource?.files ?? 0,
-        sessionSourceFiles: sessionSource?.files ?? 0,
-        dirty: Boolean(item.status?.dirty),
-        issues: [
-          ...(item.scan?.issues ?? []),
-          ...((item.scan?.sources ?? []).flatMap((source) => source.issues ?? [])),
-        ],
-      };
+  return memoryIndexCache.get(async () => {
+    try {
+      const output = await runCommand(['memory', 'status', '--json']);
+      const rawStatuses = parseJsonPayload<RawMemoryStatus[]>(output, []);
+      return rawStatuses.map((item) => {
+        const memorySource = item.status?.sourceCounts?.find((source) => source.source === 'memory');
+        const sessionSource = item.status?.sourceCounts?.find((source) => source.source === 'sessions');
+        const base = {
+          agentId: item.agentId,
+          workspaceDir: item.status?.workspaceDir ?? '',
+          backend: item.status?.backend ?? item.status?.provider ?? 'unknown',
+          vectorReady: Boolean(item.status?.vector?.enabled && item.status?.vector?.available),
+          indexedFiles: item.status?.files ?? 0,
+          indexedChunks: item.status?.chunks ?? 0,
+          memorySourceFiles: memorySource?.files ?? 0,
+          sessionSourceFiles: sessionSource?.files ?? 0,
+          dirty: Boolean(item.status?.dirty),
+          issues: [
+            ...(item.scan?.issues ?? []),
+            ...((item.scan?.sources ?? []).flatMap((source) => source.issues ?? [])),
+          ],
+        };
 
-      return {
-        ...base,
-        score: getAgentIndexScore(base),
-      };
-    });
-  } catch (error) {
-    return [
-      {
-        agentId: PRIMARY_AGENT_ID,
-        workspaceDir: WORKSPACE_ROOT,
-        backend: 'unknown',
-        vectorReady: false,
-        indexedFiles: 0,
-        indexedChunks: 0,
-        memorySourceFiles: 0,
-        sessionSourceFiles: 0,
-        dirty: true,
-        issues: [error instanceof Error ? error.message : 'memory status failed'],
-        score: 0,
-      },
-    ];
-  }
+        return {
+          ...base,
+          score: getAgentIndexScore(base),
+        };
+      });
+    } catch (error) {
+      console.error('[memory-score] Failed to get memory index statuses:', error);
+      return [];
+    }
+  });
 }
 
 async function buildLayerScores(agentStatuses: AgentIndexStatus[]): Promise<MemoryLayerScore[]> {
@@ -628,47 +622,49 @@ export function initMemoryTestScheduler() {
 }
 
 export async function getMemoryScore(): Promise<MemoryScoreResponse> {
-  const agentStatuses = await getMemoryIndexStatuses();
-  const layers = await buildLayerScores(agentStatuses);
-  const completenessScore = average(layers.map((layer) => layer.completenessScore));
-  const qualityScore = average(layers.map((layer) => layer.qualityScore));
-  const indexScore = average(agentStatuses.map((agent) => agent.score));
-  const overallScore = Math.round(average(layers.map((layer) => layer.score)) * 0.75 + indexScore * 0.25);
-  const history = await upsertHistory({
-    date: todayString(),
-    score: overallScore,
-    l1: layers.find((layer) => layer.key === 'l1')?.score ?? 0,
-    l2: layers.find((layer) => layer.key === 'l2')?.score ?? 0,
-    l3: layers.find((layer) => layer.key === 'l3')?.score ?? 0,
-    indexHealth: indexScore,
-  });
-  const latestTestReport = await getLatestMemoryTestReport();
-  const scheduler = getSchedulerConfig();
-  const testCases = await loadTestCases();
-
-  return {
-    workspaceRoot: WORKSPACE_ROOT,
-    overallScore,
-    indexedAgents: agentStatuses.filter((agent) => agent.vectorReady && agent.memorySourceFiles > 0).length,
-    totalAgents: agentStatuses.length,
-    overall: {
+  return memoryScoreCache.get(async () => {
+    const agentStatuses = await getMemoryIndexStatuses();
+    const layers = await buildLayerScores(agentStatuses);
+    const completenessScore = average(layers.map((layer) => layer.completenessScore));
+    const qualityScore = average(layers.map((layer) => layer.qualityScore));
+    const indexScore = average(agentStatuses.map((agent) => agent.score));
+    const overallScore = Math.round(average(layers.map((layer) => layer.score)) * 0.75 + indexScore * 0.25);
+    const history = await upsertHistory({
+      date: todayString(),
       score: overallScore,
-      grade: gradeForScore(overallScore),
-      completenessScore,
-      qualityScore,
-      indexScore,
-    },
-    layers,
-    agents: agentStatuses,
-    history,
-    latestTestReport,
-    scheduler: {
-      enabled: scheduler.enabled,
-      intervalMinutes: scheduler.intervalMinutes,
-      testCaseCount: testCases.length,
-      lastRunAt: lastScheduledRunAt ?? latestTestReport?.runAt ?? null,
-    },
-  };
+      l1: layers.find((layer) => layer.key === 'l1')?.score ?? 0,
+      l2: layers.find((layer) => layer.key === 'l2')?.score ?? 0,
+      l3: layers.find((layer) => layer.key === 'l3')?.score ?? 0,
+      indexHealth: indexScore,
+    });
+    const latestTestReport = await getLatestMemoryTestReport();
+    const scheduler = getSchedulerConfig();
+    const testCases = await loadTestCases();
+
+    return {
+      workspaceRoot: WORKSPACE_ROOT,
+      overallScore,
+      indexedAgents: agentStatuses.filter((agent) => agent.vectorReady && agent.memorySourceFiles > 0).length,
+      totalAgents: agentStatuses.length,
+      overall: {
+        score: overallScore,
+        grade: gradeForScore(overallScore),
+        completenessScore,
+        qualityScore,
+        indexScore,
+      },
+      layers,
+      agents: agentStatuses,
+      history,
+      latestTestReport,
+      scheduler: {
+        enabled: scheduler.enabled,
+        intervalMinutes: scheduler.intervalMinutes,
+        testCaseCount: testCases.length,
+        lastRunAt: lastScheduledRunAt ?? latestTestReport?.runAt ?? null,
+      },
+    };
+  });
 }
 
 export const buildMemoryScoreSnapshot = getMemoryScore;

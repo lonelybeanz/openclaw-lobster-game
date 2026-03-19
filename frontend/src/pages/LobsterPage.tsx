@@ -9,6 +9,7 @@ import {
   getMemoryScore,
   getMilestones,
   getSearchResult,
+  getVisualizationSnapshot,
   interact,
   saveMemoryLlmEval,
   searchNews,
@@ -21,8 +22,10 @@ import type {
   MemoryLlmEvalSavedRecord,
   MemoryScoreSnapshot,
   RandomEvent,
+  VisualizationSnapshot,
 } from '../types';
 import MemoryScorePanel from '../components/MemoryScorePanel';
+import VisualizationDashboard from '../components/VisualizationDashboard';
 
 type ActionType = 'feed' | 'train' | 'rest';
 
@@ -160,12 +163,15 @@ export default function LobsterPage() {
   const [stats, setStats] = useState<LobsterStats | null>(null);
   const [news, setNews] = useState<LobsterNewsItem[]>([]);
   const [memorySnapshot, setMemorySnapshot] = useState<MemoryScoreSnapshot | null>(null);
+  const [visualizationSnapshot, setVisualizationSnapshot] = useState<VisualizationSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [newsLoading, setNewsLoading] = useState(true);
   const [memoryLoading, setMemoryLoading] = useState(true);
+  const [visualizationLoading, setVisualizationLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newsError, setNewsError] = useState<string | null>(null);
   const [memoryError, setMemoryError] = useState<string | null>(null);
+  const [visualizationError, setVisualizationError] = useState<string | null>(null);
   const [memoryEval, setMemoryEval] = useState<MemoryLlmEvalResponse | null>(null);
   const [memoryEvalLoading, setMemoryEvalLoading] = useState(false);
   const [memoryEvalMessage, setMemoryEvalMessage] = useState('点击 AI 评分，检查每个 agent 的记忆结构、可检索性和长期记忆支持度。');
@@ -174,12 +180,13 @@ export default function LobsterPage() {
   const [delta, setDelta] = useState<DeltaState>(initialDelta);
   const [lastAction, setLastAction] = useState<string>('等待互动');
   const [expandedNewsId, setExpandedNewsId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'status' | 'evolution' | 'memory' | 'news'>('status');
+  const [activeTab, setActiveTab] = useState<'status' | 'evolution' | 'memory' | 'visualization' | 'news' | 'timeline'>('status');
   const [newsSubTab, setNewsSubTab] = useState<'github' | 'search'>('github');
   const [showFormulaGuide, setShowFormulaGuide] = useState(false);
   const [activeFormula, setActiveFormula] = useState<string | null>(null);
   const [showMilestoneModal, setShowMilestoneModal] = useState(false);
   const [milestones, setMilestones] = useState<any[]>([]);
+  const [milestoneCategories, setMilestoneCategories] = useState<any[]>([]);
   const [milestonesLoading, setMilestonesLoading] = useState(false);
   const [careMessage, setCareMessage] = useState<string | null>(null);
   const [deepTalkLoading, setDeepTalkLoading] = useState(false);
@@ -241,8 +248,21 @@ export default function LobsterPage() {
     }
   }
 
+  async function loadVisualization() {
+    try {
+      setVisualizationLoading(true);
+      setVisualizationError(null);
+      const data = await getVisualizationSnapshot();
+      setVisualizationSnapshot(data);
+    } catch (e) {
+      setVisualizationError(e instanceof Error ? e.message : '加载失败');
+    } finally {
+      setVisualizationLoading(false);
+    }
+  }
+
   async function refreshAll() {
-    await Promise.all([loadStats(), loadNews(), loadMemorySnapshot()]);
+    await Promise.all([loadStats(), loadNews(), loadMemorySnapshot(), loadVisualization()]);
   }
 
   async function openMilestoneModal() {
@@ -251,6 +271,7 @@ export default function LobsterPage() {
     try {
       const [milestoneData, careData] = await Promise.all([getMilestones(), getCareMessage()]);
       setMilestones(milestoneData?.milestones || []);
+      setMilestoneCategories(milestoneData?.categories || []);
       setCareMessage(careData?.message);
     } catch (e) {
       console.error('加载成长记录失败:', e);
@@ -271,6 +292,7 @@ export default function LobsterPage() {
       // 刷新里程碑
       const data = await getMilestones();
       setMilestones(data?.milestones || []);
+      setMilestoneCategories(data?.categories || []);
       
       // 显示小龙虾的回复
       if (result?.reply) {
@@ -550,7 +572,9 @@ export default function LobsterPage() {
       <div style={{display:"flex", gap:"8px", marginBottom:"15px", padding:"0 20px"}}>
         <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="status"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("status")}>📊状态</button>
         <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="evolution"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("evolution")}>🧬进化</button>
+        <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="timeline"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("timeline")}>📈时间线</button>
         <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="memory"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("memory")}>💾记忆</button>
+        <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="visualization"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("visualization")}>📊图表</button>
         <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="news"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("news")}>📰资讯</button>
       </div>
       {error ? <div className="panel error glass-card">数据加载失败：{error}</div> : null}
@@ -994,6 +1018,12 @@ export default function LobsterPage() {
             </section>
           </section>
 
+          <VisualizationDashboard
+            snapshot={visualizationSnapshot}
+            loading={visualizationLoading}
+            error={visualizationError}
+          />
+
           <section className="panel glass-card lobster-news-panel fade-in-up delay-3 tab-content" data-tab="news">
             {/* 子标签页 */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
@@ -1140,6 +1170,17 @@ export default function LobsterPage() {
           </section>
         </>
       ) : null}
+
+      {/* 时间线 Tab */}
+      {activeTab === 'timeline' ? (
+        <section className="fade-in-up delay-3 tab-content" data-tab="timeline">
+          <div className="panel glass-card" style={{ padding: '20px' }}>
+            <h2 style={{ margin: '0 0 20px 0' }}>📈 成长时间线</h2>
+            <p>功能开发中...</p>
+          </div>
+        </section>
+      ) : null}
+
       {/* 成长里程碑模态框 */}
       {showMilestoneModal ? (
         <div
@@ -1208,38 +1249,116 @@ export default function LobsterPage() {
             {milestonesLoading ? <p style={{ margin: 0 }}>成长记录加载中...</p> : null}
             {!milestonesLoading && milestones.length === 0 ? <p style={{ margin: 0 }}>暂无成长记录</p> : null}
 
-            {!milestonesLoading && milestones.length > 0 ? (
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                  gap: '12px',
-                }}
-              >
-                {milestones.map((milestone) => (
-                  <article
-                    key={milestone.id}
-                    style={{
-                      padding: '12px',
+            {!milestonesLoading && milestoneCategories.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {milestoneCategories.map((category) => (
+                  <section key={category.key} style={{ marginBottom: '8px' }}>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '12px',
+                      padding: '12px 16px',
                       borderRadius: '12px',
-                      background: milestone.unlocked 
-                        ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.15))'
-                        : 'rgba(255,255,255,0.05)',
-                      border: `1px solid ${milestone.unlocked ? 'rgba(34, 197, 94, 0.5)' : 'rgba(255,255,255,0.1)'}`,
-                      opacity: milestone.unlocked ? 1 : 0.5,
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '24px' }}>{milestone.icon || '🎯'}</span>
-                      <strong>{milestone.name}</strong>
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '24px' }}>{category.icon}</span>
+                        <div>
+                          <div style={{ fontSize: '16px', fontWeight: 600 }}>{category.name}</div>
+                          <div style={{ fontSize: '12px', opacity: 0.7 }}>{category.description}</div>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '18px', fontWeight: 700 }}>{category.unlocked}/{category.total}</div>
+                        <div style={{ fontSize: '12px', opacity: 0.7 }}>已完成</div>
+                      </div>
                     </div>
-                    <p style={{ margin: '0 0 8px 0', opacity: 0.92, fontSize: '14px' }}>{milestone.description || '暂无描述'}</p>
-                    {milestone.unlocked && milestone.unlockedAt ? (
-                      <p style={{ margin: 0, fontSize: '12px', color: '#4ade80' }}>✓ 已解锁</p>
-                    ) : (
-                      <p style={{ margin: 0, fontSize: '12px', opacity: 0.6 }}>未解锁</p>
-                    )}
-                  </article>
+                    
+                    {/* 分类进度条 */}
+                    <div style={{
+                      height: '6px',
+                      borderRadius: '999px',
+                      background: 'rgba(255,255,255,0.08)',
+                      overflow: 'hidden',
+                      marginBottom: '12px',
+                    }}>
+                      <div style={{
+                        width: `${category.progressPercent}%`,
+                        height: '100%',
+                        borderRadius: '999px',
+                        background: 'linear-gradient(90deg, #22c55e, #4ade80)',
+                        transition: 'width 0.6s ease',
+                      }} />
+                    </div>
+
+                    {/* 成就列表 */}
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                      gap: '10px',
+                    }}>
+                      {category.milestones?.map((milestone: any) => (
+                        <article
+                          key={milestone.id}
+                          style={{
+                            padding: '12px',
+                            borderRadius: '10px',
+                            background: milestone.unlocked
+                              ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(16, 185, 129, 0.1))'
+                              : 'rgba(255,255,255,0.03)',
+                            border: `1px solid ${milestone.unlocked ? 'rgba(34, 197, 94, 0.4)' : 'rgba(255,255,255,0.08)'}`,
+                            opacity: milestone.unlocked ? 1 : 0.6,
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                            <span style={{ fontSize: '20px' }}>{milestone.icon || '🎯'}</span>
+                            <strong style={{ fontSize: '14px' }}>{milestone.name}</strong>
+                          </div>
+                          <p style={{ margin: '0 0 8px 0', opacity: 0.85, fontSize: '12px' }}>{milestone.description}</p>
+                          
+                          {/* 进度条 */}
+                          {milestone.max && milestone.max > 0 ? (
+                            <div style={{ marginBottom: '6px' }}>
+                              <div style={{
+                                height: '4px',
+                                borderRadius: '999px',
+                                background: 'rgba(255,255,255,0.08)',
+                                overflow: 'hidden',
+                              }}>
+                                <div style={{
+                                  width: `${milestone.progressPercent || 0}%`,
+                                  height: '100%',
+                                  borderRadius: '999px',
+                                  background: milestone.unlocked 
+                                    ? 'linear-gradient(90deg, #22c55e, #4ade80)' 
+                                    : 'linear-gradient(90deg, #3b82f6, #60a5fa)',
+                                  transition: 'width 0.4s ease',
+                                }} />
+                              </div>
+                              <div style={{ 
+                                display: 'flex', 
+                                justifyContent: 'space-between', 
+                                fontSize: '11px', 
+                                opacity: 0.7,
+                                marginTop: '4px' 
+                              }}>
+                                <span>{milestone.progress || 0}/{milestone.max}</span>
+                                <span>{milestone.progressPercent || 0}%</span>
+                              </div>
+                            </div>
+                          ) : null}
+                          
+                          {milestone.unlocked ? (
+                            <p style={{ margin: 0, fontSize: '11px', color: '#4ade80' }}>✓ 已解锁</p>
+                          ) : (
+                            <p style={{ margin: 0, fontSize: '11px', opacity: 0.5 }}>未解锁</p>
+                          )}
+                        </article>
+                      ))}
+                    </div>
+                  </section>
                 ))}
               </div>
             ) : null}

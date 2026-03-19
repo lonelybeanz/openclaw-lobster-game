@@ -4,7 +4,9 @@ import type {
   MemoryLlmEvalResponse,
   MemoryLlmEvalSavedRecord,
   MemoryScoreSnapshot,
+  LlmMilestonesResponse,
   SearchNewsResponse,
+  VisualizationSnapshot,
 } from './types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/admin-api';
@@ -100,6 +102,10 @@ export async function getMilestones(): Promise<any> {
   return request('/lobster/milestones');
 }
 
+export async function getLlmMilestones(): Promise<LlmMilestonesResponse> {
+  return request('/lobster/llm-milestones');
+}
+
 export async function getCareMessage(): Promise<{ message: string | null }> {
   return request('/lobster/care');
 }
@@ -127,4 +133,9 @@ export async function getMemoryLlmEval(): Promise<MemoryLlmEvalResponse> {
 
 export async function saveMemoryLlmEval(result: MemoryLlmEvalResponse): Promise<MemoryLlmEvalSavedRecord> {
   return postJson('/lobster/memory-llm-eval/save', { result });
+}
+
+// 可视化快照
+export async function getVisualizationSnapshot(): Promise<VisualizationSnapshot> {
+  return request('/lobster/visualization');
 }

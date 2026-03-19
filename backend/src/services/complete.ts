@@ -1,12 +1,13 @@
 import { getLobsterStats } from './lobster';
 import { analyzeSkills } from './skillsAnalyzer';
-import { getAchievements } from './achievements';
+import { getMilestones } from './milestones';
 import { generateDialogue, getRandomEvent } from './dialogue';
 import { createTtlCache } from './cache';
+import { loadLobsterState } from './persistence';
 import type { Brain, Limbs } from './lobster';
 import type { ModelBrainMapping } from './modelMapper';
 import type { SkillsStats } from './skillsAnalyzer';
-import type { AchievementsStats } from './achievements';
+import type { MilestoneStats } from './milestones';
 import type { Dialogue } from './dialogue';
 import type { MemoryAgentScore, MemoryLayerScore } from './memoryScore';
 
@@ -50,18 +51,29 @@ export interface CompleteLobsterStats {
   totalMessages: number;
   lastActive: string;
   skillsAnalysis: SkillsStats;
-  achievements: AchievementsStats;
+  achievements: MilestoneStats;
   dialogue: Dialogue;
   event: { title: string; description: string; effect: string } | null;
 }
 
 export async function getCompleteLobsterStats(): Promise<CompleteLobsterStats> {
-  const [baseStats, skillsStats] = await Promise.all([
+  const [baseStats, skillsStats, lobsterState] = await Promise.all([
     getLobsterStats(),
     skillsCache.get(() => analyzeSkills()),
+    loadLobsterState(),
   ]);
 
-  const achievements = await getAchievements(baseStats);
+  const milestoneStats = {
+    totalInteractions: lobsterState.totalInteractions || 0,
+    consecutiveDays: lobsterState.consecutiveDays || 0,
+    lastActiveDate: lobsterState.lastActiveDate || new Date().toISOString().slice(0, 10),
+    firstMeet: lobsterState.firstMeet,
+    midnightCount: lobsterState.midnightCount || 0,
+    deepTalkCount: lobsterState.deepTalkCount || 0,
+    challengesCompleted: lobsterState.challengesCompleted || 0,
+    skills: 0,
+  };
+  const achievements = await getMilestones(baseStats, milestoneStats);
   const dialogue = generateDialogue(baseStats);
   const event = getRandomEvent();
 

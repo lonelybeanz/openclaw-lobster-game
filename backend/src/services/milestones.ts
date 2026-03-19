@@ -9,23 +9,40 @@ const ENV = {
   HOME: '/Users/moltbot',
 };
 
-// 成长任务系统 - 替代喂食/训练/休息
-// 每次交互解锁一个"人生节点"
+// 成长之路 - 合并里程碑 + 四大类成就系统
+
+export type MilestoneCategory = 'milestone' | 'brain' | 'skill' | 'explore' | 'social' | 'journey';
 
 export interface Milestone {
   id: string;
   name: string;
   description: string;
   icon: string;
+  category: MilestoneCategory;
   unlocked: boolean;
   unlockedAt?: string;
-  requirement?: (stats: LobsterStats) => boolean;
+  progress?: number;
+  max?: number;
+  progressPercent?: number;
+}
+
+export interface MilestoneCategoryGroup {
+  key: MilestoneCategory;
+  name: string;
+  icon: string;
+  description: string;
+  total: number;
+  unlocked: number;
+  progressPercent: number;
+  milestones: Milestone[];
 }
 
 export interface MilestoneStats {
   total: number;
   unlocked: number;
+  progressPercent: number;
   milestones: Milestone[];
+  categories: MilestoneCategoryGroup[];
 }
 
 export interface LobsterStats {
@@ -37,9 +54,34 @@ export interface LobsterStats {
   deepTalkCount: number;
   challengesCompleted: number;
   skills?: number;
+  age?: number;
+  level?: number;
+  brain?: {
+    neurons?: number;
+    longTerm?: number;
+    procedural?: number;
+  };
+  memory?: {
+    shallow?: { count?: number };
+    deep?: { count?: number };
+    organization?: number;
+    overallScore?: number;
+    indexedAgents?: number;
+  };
 }
 
-const MILESTONES = [
+// 分类元数据
+const CATEGORY_META: Record<MilestoneCategory, { name: string; icon: string; description: string; order: number }> = {
+  milestone: { name: '成长之路', icon: '🎯', description: '记录与小龙虾共同成长的每一步', order: 1 },
+  brain: { name: '脑力', icon: '🧠', description: '聚焦智力、记忆与认知成长', order: 2 },
+  skill: { name: '技能', icon: '🛠️', description: '记录技能数量与熟练度积累', order: 3 },
+  explore: { name: '探索', icon: '🧭', description: '衡量记忆深度、索引覆盖与养成时长', order: 4 },
+  social: { name: '社交', icon: '💬', description: '关注会话频率、互动密度与伙伴关系', order: 5 },
+  journey: { name: '心路历程', icon: '🌟', description: 'LLM 动态生成的个性化成长卡片', order: 6 },
+};
+
+// 里程碑定义（原成长之路）
+const MILESTONE_DEFINITIONS = [
   { id: 'first_meet', name: '初心萌动', desc: '首次相遇，开启养成之旅', icon: '👋', condition: (s: LobsterStats) => !!s.firstMeet },
   { id: 'consecutive_3', name: '三日之约', desc: '连续3天陪伴', icon: '🗓️', condition: (s: LobsterStats) => (s.consecutiveDays || 0) >= 3 },
   { id: 'consecutive_7', name: '一周伙伴', desc: '连续7天陪伴', icon: '🌟', condition: (s: LobsterStats) => (s.consecutiveDays || 0) >= 7 },
@@ -54,29 +96,145 @@ const MILESTONES = [
   { id: 'challenge_5', name: '挑战达人', desc: '完成5个挑战', icon: '⚔️', condition: (s: LobsterStats) => (s.challengesCompleted || 0) >= 5 },
   { id: 'midnight_1', name: '夜猫子', desc: '首次熬夜陪伴', icon: '🌙', condition: (s: LobsterStats) => (s.midnightCount || 0) >= 1 },
   { id: 'midnight_5', name: '深夜守护者', desc: '累计5次熬夜', icon: '🌃', condition: (s: LobsterStats) => (s.midnightCount || 0) >= 5 },
-  { id: 'age_30', name: '一月游', desc: '陪伴30天', icon: '🗓️', condition: (s: any) => (s.age || 0) >= 30 },
+  { id: 'age_30', name: '一月游', desc: '陪伴30天', icon: '🗓️', condition: (s: LobsterStats) => (s.age || 0) >= 30 },
 ];
 
-export async function getMilestones(stats: any, milestoneStats: LobsterStats): Promise<MilestoneStats> {
-  const mergedStats = { ...stats, ...milestoneStats };
-  const milestones: Milestone[] = [];
-  let unlocked = 0;
+// 成就定义（四大类）
+const ACHIEVEMENT_DEFINITIONS = [
+  // 脑力类
+  { id: 'brain_neurons_100', name: '最强大脑', desc: '神经元达到 100', icon: '🧠', category: 'brain' as MilestoneCategory, max: 100, progress: (s: LobsterStats) => s.brain?.neurons || 0 },
+  { id: 'brain_long_term_80', name: '记忆超群', desc: '长期记忆达到 80', icon: '💾', category: 'brain' as MilestoneCategory, max: 80, progress: (s: LobsterStats) => s.brain?.longTerm || 0 },
+  { id: 'brain_memory_org_80', name: '井井有条', desc: '记忆组织度达到 80', icon: '📚', category: 'brain' as MilestoneCategory, max: 80, progress: (s: LobsterStats) => s.memory?.organization || 0 },
 
-  for (const m of MILESTONES) {
+  // 技能类
+  { id: 'skill_3', name: '三板斧', desc: '拥有 3 个技能', icon: '🪓', category: 'skill' as MilestoneCategory, max: 3, progress: (s: LobsterStats) => s.skills || 0 },
+  { id: 'skill_10', name: '十项全能', desc: '拥有 10 个技能', icon: '🏆', category: 'skill' as MilestoneCategory, max: 10, progress: (s: LobsterStats) => s.skills || 0 },
+  { id: 'skill_level_10', name: '熟练进化', desc: '等级达到 10', icon: '🐉', category: 'skill' as MilestoneCategory, max: 10, progress: (s: LobsterStats) => s.level || 0 },
+
+  // 探索类
+  { id: 'explore_age_7', name: '一周目', desc: '陪伴满 7 天', icon: '📅', category: 'explore' as MilestoneCategory, max: 7, progress: (s: LobsterStats) => s.age || 0 },
+  { id: 'explore_age_30', name: '一月游', desc: '陪伴满 30 天', icon: '🗓️', category: 'explore' as MilestoneCategory, max: 30, progress: (s: LobsterStats) => s.age || 0 },
+  { id: 'explore_night_5', name: '深夜守护者', desc: '累计 5 次深夜陪伴', icon: '🌃', category: 'explore' as MilestoneCategory, max: 5, progress: (s: LobsterStats) => s.midnightCount || 0 },
+
+  // 社交类
+  { id: 'social_sessions_10', name: '社交达人', desc: '完成 10 次会话', icon: '💬', category: 'social' as MilestoneCategory, max: 10, progress: (s: LobsterStats) => s.totalInteractions || 0 },
+  { id: 'social_interactions_50', name: '话痨小龙虾', desc: '累计 50 次互动', icon: '🗣️', category: 'social' as MilestoneCategory, max: 50, progress: (s: LobsterStats) => s.totalInteractions || 0 },
+  { id: 'social_deep_talk_5', name: '知心伙伴', desc: '累计 5 次深度对话', icon: '✨', category: 'social' as MilestoneCategory, max: 5, progress: (s: LobsterStats) => s.deepTalkCount || 0 },
+];
+
+function clampProgress(value: number, max: number): number {
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  if (value >= max) return max;
+  return value;
+}
+
+function toPercent(value: number, max: number): number {
+  if (!Number.isFinite(max) || max <= 0) return 0;
+  return Math.min(100, Math.round((clampProgress(value, max) / max) * 100));
+}
+
+export async function getMilestones(
+  stats: any,
+  milestoneStats: LobsterStats,
+  llmMilestones?: Array<{
+    id: string;
+    name: string;
+    description: string;
+    icon?: string;
+    unlocked?: boolean;
+    progress?: number;
+    maxProgress?: number;
+  }>
+): Promise<MilestoneStats> {
+  const mergedStats: LobsterStats = { ...stats, ...milestoneStats };
+  const milestones: Milestone[] = [];
+  const unlockedAt = new Date().toISOString();
+
+  // 1. 处理原成长之路里程碑
+  for (const m of MILESTONE_DEFINITIONS) {
     const isUnlocked = m.condition(mergedStats);
-    if (isUnlocked) unlocked++;
+    if (isUnlocked) {
+      milestones.push({
+        id: m.id,
+        name: m.name,
+        description: m.desc,
+        icon: m.icon,
+        category: 'milestone',
+        unlocked: true,
+        unlockedAt,
+      });
+    }
+  }
+
+  // 2. 处理四大类成就
+  for (const ach of ACHIEVEMENT_DEFINITIONS) {
+    const currentValue = Math.max(0, ach.progress(mergedStats));
+    const isUnlocked = currentValue >= ach.max;
+    const progress = clampProgress(currentValue, ach.max);
 
     milestones.push({
-      id: m.id,
-      name: m.name,
-      description: m.desc,
-      icon: m.icon,
+      id: ach.id,
+      name: ach.name,
+      description: ach.desc,
+      icon: ach.icon,
+      category: ach.category,
       unlocked: isUnlocked,
-      unlockedAt: isUnlocked ? new Date().toISOString() : undefined,
+      unlockedAt: isUnlocked ? unlockedAt : undefined,
+      progress,
+      max: ach.max,
+      progressPercent: toPercent(currentValue, ach.max),
     });
   }
 
-  return { total: MILESTONES.length, unlocked, milestones };
+  // 3. 添加 LLM 动态成就（心路历程）
+  if (llmMilestones && llmMilestones.length > 0) {
+    for (const card of llmMilestones) {
+      milestones.push({
+        id: `llm-${card.id}`,
+        name: `${card.icon || '🌟'} ${card.name}`,
+        description: card.description,
+        icon: card.icon || '🌟',
+        category: 'journey',
+        unlocked: card.unlocked ?? true,
+        unlockedAt: card.unlocked ? unlockedAt : undefined,
+        progress: card.progress,
+        max: card.maxProgress,
+        progressPercent: card.maxProgress ? toPercent(card.progress || 0, card.maxProgress) : 100,
+      });
+    }
+  }
+
+  // 4. 按分类分组
+  const categories: MilestoneCategoryGroup[] = (Object.keys(CATEGORY_META) as MilestoneCategory[])
+    .map((key) => {
+      const meta = CATEGORY_META[key];
+      const categoryMilestones = milestones.filter((m) => m.category === key);
+      const unlocked = categoryMilestones.filter((m) => m.unlocked).length;
+      const total = categoryMilestones.length;
+
+      return {
+        key,
+        name: meta.name,
+        icon: meta.icon,
+        description: meta.description,
+        total,
+        unlocked,
+        progressPercent: total > 0 ? Math.round((unlocked / total) * 100) : 0,
+        milestones: categoryMilestones,
+      };
+    })
+    .sort((a, b) => CATEGORY_META[a.key].order - CATEGORY_META[b.key].order);
+
+  const total = milestones.length;
+  const unlocked = milestones.filter((m) => m.unlocked).length;
+
+  return {
+    total,
+    unlocked,
+    progressPercent: total > 0 ? Math.round((unlocked / total) * 100) : 0,
+    milestones,
+    categories,
+  };
 }
 
 export function generateCareMessage(stats: any): string | null {
@@ -101,74 +259,29 @@ export function generateCareMessage(stats: any): string | null {
     return messages[Math.floor(Math.random() * messages.length)] ?? null;
   }
 
-  if (mood < 30) {
-    const messages = ['今天有点郁闷...', '感觉你不理我了...', '心情不好，求安慰QAQ'];
-    return messages[Math.floor(Math.random() * messages.length)] ?? null;
-  }
-
   return null;
 }
 
-// 使用 OpenClaw 增强里程碑描述
-function runAcpx(prompt: string, timeoutMs = 60000): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(ACPX, ['codex', 'prompt', '--', prompt], { 
-      env: ENV, 
-      timeout: timeoutMs 
-    });
-    let stdout = '';
-    let stderr = '';
-    child.stdout?.on('data', d => stdout += d);
-    child.stderr?.on('data', d => stderr += d);
-    child.on('close', code => {
-      if (code === 0) resolve(stdout.trim());
-      else reject(new Error(`exit ${code}: ${stderr.slice(0, 200)}`));
-    });
-    child.on('error', err => reject(err));
-    setTimeout(() => { child.kill('SIGTERM'); reject(new Error('timeout')); }, timeoutMs);
-  });
-}
-
-// 增强里程碑描述（每天调用一次）
 export async function enhanceMilestones(): Promise<Record<string, string>> {
   try {
-    const prompt = `你是一个游戏文案大师。请为以下龙虾养成游戏的里程碑成就生成更丰富的描述和背景故事。
-
-里程碑列表：
-1. 初心萌动 - 首次相遇，开启养成之旅
-2. 三日之约 - 连续3天陪伴
-3. 一周伙伴 - 连续7天陪伴
-4. 半月同频 - 连续14天陪伴
-5. 话痨小龙虾 - 累计50次互动
-6. 元老伙伴 - 累计100次互动
-7. 灵智初开 - 首次深度对话
-8. 知心伙伴 - 累计5次深度对话
-9. 心流共鸣 - 累计20次深度对话
-10. 全技能掌握 - 解锁全部技能
-11. 进化之路 - 完成第一个挑战
-12. 挑战达人 - 完成5个挑战
-13. 夜猫子 - 首次熬夜陪伴
-14. 深夜守护者 - 累计5次熬夜
-15. 一月游 - 陪伴30天
-
-请为每个里程碑返回JSON格式的增强描述：
-{"id": "描述"}
-
-例如：
-{"first_meet": "那天夕阳下，你我初次相遇，从此开启了这段奇妙的养成之旅..."}
-
-只返回JSON，不要其他内容。`;
-
-    const output = await runAcpx(prompt, 90000);
-    
-    // 解析 JSON
-    const match = output.match(/\{[\s\S]*\}/);
-    if (match) {
-      return JSON.parse(match[0]);
-    }
+    const output = await execFile(ACPX, ['codex', 'sessions', 'list'], { env: ENV });
+    // 简单处理，实际可以接入 AI 增强描述
     return {};
-  } catch (e) {
-    console.error('[enhanceMilestones] 增强失败:', e);
+  } catch {
     return {};
   }
+}
+
+function execFile(command: string, args: string[], options: any): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { ...options, shell: false });
+    let stdout = '';
+    let stderr = '';
+    child.stdout?.on('data', (data) => { stdout += data; });
+    child.stderr?.on('data', (data) => { stderr += data; });
+    child.on('close', (code) => {
+      if (code === 0) resolve(stdout);
+      else reject(new Error(stderr || `Exit code ${code}`));
+    });
+  });
 }

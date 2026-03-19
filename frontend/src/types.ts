@@ -271,6 +271,12 @@ export type Achievement = {
   id: string;
   name: string;
   unlocked: boolean;
+  icon?: string;
+  description?: string;
+  category?: string;
+  progress?: number;
+  max?: number;
+  unlockedAt?: string;
 };
 
 export type AchievementItem = Achievement & {
@@ -280,6 +286,32 @@ export type AchievementItem = Achievement & {
   unlockTime?: string;
   unlocked_at?: string;
   achievedAt?: string;
+};
+
+export type LlmMilestoneCard = {
+  id: 'growth' | 'brain' | 'skills' | 'exploration' | 'social' | 'flow' | 'guardian' | 'evolution';
+  category: string;
+  icon: string;
+  name: string;
+  headline: string;
+  description: string;
+  nextHint: string;
+  level: 'bronze' | 'silver' | 'gold' | 'mythic';
+  score: number;
+  progress: number;
+  maxProgress: number;
+  progressText: string;
+  unlocked: boolean;
+  metricLabel: string;
+  metricValue: string;
+};
+
+export type LlmMilestonesResponse = {
+  generatedAt: string;
+  expiresAt: string;
+  source: 'fresh' | 'cache' | 'stale-cache' | 'fallback';
+  summary: string;
+  cards: LlmMilestoneCard[];
 };
 
 export type SearchNewsStatus = 'pending' | 'done' | 'error';
@@ -300,4 +332,58 @@ export type SkillStats = {
   skills?: string[];
   categories?: string[];
   recentlyAdded?: string[];
+};
+
+export type VisualizationPoint = {
+  label: string;
+  value: number;
+};
+
+export type VisualizationSnapshot = {
+  updatedAt: string;
+  tokens: {
+    summary: {
+      totalTokens: number;
+      totalSessions: number;
+      lastUpdated: string | null;
+      avgPerSession: number;
+    };
+    dailyTrend: VisualizationPoint[];
+    weeklyTrend: VisualizationPoint[];
+    topSessions: Array<{
+      key: string;
+      tokens: number;
+      model: string;
+      updatedAt: string | null;
+    }>;
+  };
+  memory: {
+    summary: {
+      overallScore: number;
+      indexedAgents: number;
+      totalAgents: number;
+      latestGrowth: number;
+    };
+    growthTrend: Array<{
+      label: string;
+      score: number;
+      growth: number;
+      indexHealth: number;
+    }>;
+  };
+  skills: {
+    summary: {
+      total: number;
+      categoryCount: number;
+    };
+    distribution: Array<{
+      name: string;
+      value: number;
+    }>;
+    topSkills: Array<{
+      name: string;
+      category: string;
+      description: string;
+    }>;
+  };
 };
