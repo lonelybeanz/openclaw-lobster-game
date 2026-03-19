@@ -180,8 +180,9 @@ export default function LobsterPage() {
   const [delta, setDelta] = useState<DeltaState>(initialDelta);
   const [lastAction, setLastAction] = useState<string>('等待互动');
   const [expandedNewsId, setExpandedNewsId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'status' | 'evolution' | 'memory' | 'visualization' | 'news' | 'timeline'>('status');
+  const [activeTab, setActiveTab] = useState<'status' | 'achievements' | 'memory'>('status');
   const [newsSubTab, setNewsSubTab] = useState<'github' | 'search'>('github');
+  const [timelinePeriod, setTimelinePeriod] = useState<'7d' | '30d' | '90d'>('7d');
   const [showFormulaGuide, setShowFormulaGuide] = useState(false);
   const [activeFormula, setActiveFormula] = useState<string | null>(null);
   const [showMilestoneModal, setShowMilestoneModal] = useState(false);
@@ -571,11 +572,8 @@ export default function LobsterPage() {
       </header>
       <div style={{display:"flex", gap:"8px", marginBottom:"15px", padding:"0 20px"}}>
         <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="status"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("status")}>📊状态</button>
-        <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="evolution"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("evolution")}>🧬进化</button>
-        <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="timeline"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("timeline")}>📈时间线</button>
+        <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="achievements"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("achievements")}>🏆成就</button>
         <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="memory"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("memory")}>💾记忆</button>
-        <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="visualization"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("visualization")}>📊图表</button>
-        <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="news"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("news")}>📰资讯</button>
       </div>
       {error ? <div className="panel error glass-card">数据加载失败：{error}</div> : null}
       {loading && !stats ? <div className="panel glass-card">正在加载龙虾状态...</div> : null}
@@ -719,7 +717,7 @@ export default function LobsterPage() {
             </article>
           </section>
 
-          <section className="fade-in-up delay-3 tab-content" data-tab="evolution">
+          <section className="fade-in-up delay-3 tab-content" data-tab="achievements">
             <h3 style={{ margin: '0 0 12px 0' }}>🧬 进化程度</h3>
             <div
               className="kpi-grid lobster-kpi-grid"
@@ -1174,9 +1172,88 @@ export default function LobsterPage() {
       {/* 时间线 Tab */}
       {activeTab === 'timeline' ? (
         <section className="fade-in-up delay-3 tab-content" data-tab="timeline">
-          <div className="panel glass-card" style={{ padding: '20px' }}>
-            <h2 style={{ margin: '0 0 20px 0' }}>📈 成长时间线</h2>
-            <p>功能开发中...</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            {/* 健康趋势 */}
+            <div className="panel glass-card">
+              <h3 style={{ margin: '0 0 16px 0' }}>❤️ 健康趋势</h3>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                {(['7d', '30d', '90d'] as const).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setTimelinePeriod(p)}
+                    style={{
+                      padding: '6px 12px',
+                      border: 'none',
+                      borderRadius: '6px',
+                      background: timelinePeriod === p ? 'linear-gradient(135deg, #667eea, #764ba2)' : 'rgba(255,255,255,0.1)',
+                      color: 'white',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                    }}
+                  >
+                    {p.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+              {stats && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                  <div style={{ padding: '8px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)' }}>
+                    <div style={{ fontSize: '11px', opacity: 0.7 }}>饥饿</div>
+                    <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{stats.hunger}%</div>
+                  </div>
+                  <div style={{ padding: '8px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)' }}>
+                    <div style={{ fontSize: '11px', opacity: 0.7 }}>心情</div>
+                    <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{stats.mood}%</div>
+                  </div>
+                  <div style={{ padding: '8px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)' }}>
+                    <div style={{ fontSize: '11px', opacity: 0.7 }}>疲劳</div>
+                    <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{stats.fatigue}%</div>
+                  </div>
+                  <div style={{ padding: '8px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)' }}>
+                    <div style={{ fontSize: '11px', opacity: 0.7 }}>健康</div>
+                    <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{stats.health ?? 100}%</div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 成长里程碑 */}
+            <div className="panel glass-card">
+              <h3 style={{ margin: '0 0 16px 0' }}>🏆 成就进度</h3>
+              {achievements.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {achievements.slice(0, 4).map((a) => (
+                    <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span>{a.unlocked ? '✅' : '🔒'}</span>
+                      <span style={{ fontSize: '13px' }}>{a.name}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ opacity: 0.6, fontSize: '13px' }}>暂无成就记录</p>
+              )}
+            </div>
+
+            {/* Token 趋势 */}
+            <div className="panel glass-card">
+              <h3 style={{ margin: '0 0 16px 0' }}>💰 Token 使用</h3>
+              <div style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>
+                {((stats?.totalTokens ?? 0) / 10000).toFixed(1)}万
+              </div>
+              <div style={{ fontSize: '12px', opacity: 0.7 }}>
+                共 {stats?.totalSessions ?? 0} 次会话
+              </div>
+            </div>
+
+            {/* 最近活动 */}
+            <div className="panel glass-card">
+              <h3 style={{ margin: '0 0 16px 0' }}>📅 最近活动</h3>
+              <div style={{ fontSize: '13px', opacity: 0.8 }}>
+                <p>🕐 最后互动: {lastAction}</p>
+                <p>📊 等级: Lv.{stats?.level ?? 1}</p>
+                <p>⭐ 经验: {stats?.experience ?? 0}</p>
+              </div>
+            </div>
           </div>
         </section>
       ) : null}

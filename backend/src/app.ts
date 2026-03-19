@@ -6,6 +6,7 @@ import { getTokenStats, initTokenStats, updateTokenStats } from './services/toke
 import { interact, loadLobsterState, getAchievements, saveLobsterState } from './services/persistence';
 import { initModelBenchmarkUpdater } from './services/modelBenchmark';
 import { getMilestones, generateCareMessage, enhanceMilestones } from './services/milestones';
+import { getLlmMilestones } from './services/llmMilestones';
 import { checkOpenClawStatus, chatWithLobster } from './services/openclaw';
 import { createTtlCache } from './services/cache';
 import { getPromptStats } from './services/promptStats';
@@ -15,6 +16,7 @@ import { getLatestMemoryLlmEvalResult, saveMemoryLlmEvalResult } from './service
 import { ensureHealthTimelineLog, getHealthTrend } from './services/healthTimeline';
 import { getVisualizationSnapshot } from './services/visualization';
 import { getAchievementStore, getAchievementUnlockHistory } from './services/achievementStore';
+import { computeLobsterState } from './services/lobsterStateEngine';
 
 const app = new Hono();
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -77,18 +79,30 @@ try {
 }
 
 app.get('/lobster/stats', async (c) => {
+  // 使用状态引擎计算动态数据
+  const computed = await computeLobsterState();
+  
   const data = await statsCache.get(async () => {
     const [stats, lobsterState] = await Promise.all([getCompleteLobsterStats(), loadLobsterState()]);
     return {
       ...stats,
-      hunger: lobsterState.hunger,
-      health: lobsterState.health,
-      mood: lobsterState.mood,
-      fatigue: lobsterState.fatigue,
-      loyalty: lobsterState.loyalty,
-      level: lobsterState.level,
-      experience: lobsterState.experience,
-      experiencePool: stats.experiencePool + lobsterState.experience,
+      // 使用计算引擎的动态值
+      hunger: computed.hunger,
+      mood: computed.mood,
+      fatigue: computed.fatigue,
+      loyalty: computed.loyalty,
+      health: Math.floor(100 - computed.fatigue / 2),
+      // Token 相关
+      totalTokens: computed.totalTokens,
+      totalSessions: computed.totalSessions,
+      // 经验等级系统
+      experience: computed.experience,
+      level: computed.level,
+      experiencePool: stats.experiencePool + computed.experience,
+      // 脑力和技能
+      brain: computed.brain,
+      skills: computed.skills,
+      // 互动
       totalInteractions: lobsterState.totalInteractions,
     };
   });
@@ -233,7 +247,19 @@ app.get('/lobster/milestones', async (c) => {
       challengesCompleted: lobsterState.challengesCompleted || 0,
       skills: stats.skills || 0,
     };
-    return getMilestones(stats, milestoneStats);
+    
+    // 获取 LLM 心路历程卡片
+    let llmCards: any[] = [];
+    try {
+      const llmData = await getLlmMilestones();
+      if (llmData.cards?.length > 0) {
+        llmCards = llmData.cards;
+      }
+    } catch (err) {
+      console.error('[milestones] getLlmMilestones failed:', err);
+    }
+    
+    return getMilestones(stats, milestoneStats, llmCards);
   });
   return c.json({ code: 0, data: milestones });
 });

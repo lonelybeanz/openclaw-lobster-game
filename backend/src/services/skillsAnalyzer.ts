@@ -35,18 +35,21 @@ export async function analyzeSkills(): Promise<SkillsStats> {
   const recentlyAdded: string[] = [];
   
   try {
-    const files = await readdir(SKILLS_DIR);
+    const entries = await readdir(SKILLS_DIR, { withFileTypes: true });
     
-    for (const file of files) {
-      if (!file.endsWith('.md') || file === 'README.md') continue;
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.name === 'README.md') continue;
+      
+      const skillDir = join(SKILLS_DIR, entry.name);
+      const skillFile = join(skillDir, 'SKILL.md');
       
       try {
-        const content = await readFile(join(SKILLS_DIR, file), 'utf-8');
+        const content = await readFile(skillFile, 'utf-8');
         const lines = content.split('\n');
         
         // 提取名称
         const titleLine = lines.find(l => l.startsWith('# '));
-        const name = titleLine?.replace('# ', '').trim() || file.replace('.md', '');
+        const name = titleLine?.replace('# ', '').trim() || entry.name;
         
         // 提取描述
         const descLine = lines.find(l => l.length > 20 && !l.startsWith('#'));

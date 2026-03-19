@@ -204,8 +204,8 @@ export async function getVisualizationSnapshot(): Promise<VisualizationSnapshot>
     analyzeSkills(),
   ]);
 
-  const increments = Array.isArray(tokenFile.increments) ? tokenFile.increments : [];
-  const topSessions = (Array.isArray(tokenFile.history) ? tokenFile.history : [])
+  const history = Array.isArray(tokenFile.history) ? tokenFile.history : [];
+  const topSessions = history
     .map((item) => ({
       key: typeof item.key === 'string' && item.key ? item.key : 'unknown',
       tokens: Math.max(0, Math.round(Number(item.tokens) || 0)),
@@ -214,6 +214,41 @@ export async function getVisualizationSnapshot(): Promise<VisualizationSnapshot>
     }))
     .sort((a, b) => b.tokens - a.tokens)
     .slice(0, 6);
+
+  // 从 history 聚合每日趋势
+  const dailyMap = new Map<string, number>();
+  for (const item of history) {
+    const date = toDate(item.updatedAt)?.toISOString().slice(0, 10);
+    if (date) {
+      dailyMap.set(date, (dailyMap.get(date) ?? 0) + Math.max(0, Math.round(Number(item.tokens) || 0)));
+    }
+  }
+  const today = new Date();
+  const dailyTrend: VisualizationPoint[] = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    dailyTrend.push({ label: key.slice(5), value: dailyMap.get(key) ?? 0 });
+  }
+
+  // 从 history 聚合每周趋势
+  const weeklyMap = new Map<string, number>();
+  for (const item of history) {
+    const date = toDate(item.updatedAt);
+    if (date) {
+      const weekStart = startOfWeek(date).toISOString().slice(0, 10);
+      weeklyMap.set(weekStart, (weeklyMap.get(weekStart) ?? 0) + Math.max(0, Math.round(Number(item.tokens) || 0)));
+    }
+  }
+  const weeklyTrend: VisualizationPoint[] = [];
+  const currentWeek = startOfWeek(today);
+  for (let offset = 7; offset >= 0; offset -= 1) {
+    const weekStart = new Date(currentWeek);
+    weekStart.setUTCDate(currentWeek.getUTCDate() - offset * 7);
+    const key = weekStart.toISOString().slice(0, 10);
+    weeklyTrend.push({ label: weekLabel(key), value: weeklyMap.get(key) ?? 0 });
+  }
 
   const memoryHistory = [...memorySnapshot.history]
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -246,8 +281,8 @@ export async function getVisualizationSnapshot(): Promise<VisualizationSnapshot>
             ? Math.round((Math.max(0, Math.round(Number(tokenFile.totalTokens) || 0)) / Number(tokenFile.sessions)) * 10) / 10
             : 0,
       },
-      dailyTrend: buildDailyTrend(increments),
-      weeklyTrend: buildWeeklyTrend(increments),
+      dailyTrend,
+      weeklyTrend,
       topSessions,
     },
     memory: {
