@@ -387,3 +387,28 @@ export type VisualizationSnapshot = {
     }>;
   };
 };
+
+// Timeline 相关类型（向后兼容）
+export type AchievementTimelineUnlock = {
+  id: string;
+  title: string;
+  description: string;
+  unlockedAt: string;
+  type: string;
+};
+
+export type GrowthHeatmapItem = {
+  date: string;
+  count: number;
+  level?: number;
+};
+
+export type HealthPeriod = '7d' | '30d' | '90d';
+
+export type HealthRecord = {
+  date: string;
+  hunger: number;
+  mood: number;
+  fatigue: number;
+  health: number;
+};
