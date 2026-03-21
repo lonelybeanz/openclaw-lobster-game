@@ -3,6 +3,7 @@ import {
   RequestTimeoutError,
   deepTalk,
   getCareMessage,
+  getHealthTrend,
   getLobsterNews,
   getLobsterStats,
   getMemoryLlmEval,
@@ -16,6 +17,7 @@ import {
 } from '../api';
 import type {
   AchievementItem,
+  HealthTrendSnapshot,
   LobsterNewsItem,
   LobsterStats,
   MemoryLlmEvalResponse,
@@ -26,6 +28,7 @@ import type {
 } from '../types';
 import MemoryScorePanel from '../components/MemoryScorePanel';
 import VisualizationDashboard from '../components/VisualizationDashboard';
+import HealthTimelinePanel from '../components/HealthTimelinePanel';
 
 type ActionType = 'feed' | 'train' | 'rest';
 
@@ -164,14 +167,17 @@ export default function LobsterPage() {
   const [news, setNews] = useState<LobsterNewsItem[]>([]);
   const [memorySnapshot, setMemorySnapshot] = useState<MemoryScoreSnapshot | null>(null);
   const [visualizationSnapshot, setVisualizationSnapshot] = useState<VisualizationSnapshot | null>(null);
+  const [healthTrendSnapshot, setHealthTrendSnapshot] = useState<HealthTrendSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [newsLoading, setNewsLoading] = useState(true);
   const [memoryLoading, setMemoryLoading] = useState(true);
   const [visualizationLoading, setVisualizationLoading] = useState(true);
+  const [healthTrendLoading, setHealthTrendLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newsError, setNewsError] = useState<string | null>(null);
   const [memoryError, setMemoryError] = useState<string | null>(null);
   const [visualizationError, setVisualizationError] = useState<string | null>(null);
+  const [healthTrendError, setHealthTrendError] = useState<string | null>(null);
   const [memoryEval, setMemoryEval] = useState<MemoryLlmEvalResponse | null>(null);
   const [memoryEvalLoading, setMemoryEvalLoading] = useState(false);
   const [memoryEvalMessage, setMemoryEvalMessage] = useState('点击 AI 评分，检查每个 agent 的记忆结构、可检索性和长期记忆支持度。');
@@ -262,8 +268,21 @@ export default function LobsterPage() {
     }
   }
 
+  async function loadHealthTrend() {
+    try {
+      setHealthTrendLoading(true);
+      setHealthTrendError(null);
+      const data = await getHealthTrend('30d');
+      setHealthTrendSnapshot(data);
+    } catch (e) {
+      setHealthTrendError(e instanceof Error ? e.message : '加载失败');
+    } finally {
+      setHealthTrendLoading(false);
+    }
+  }
+
   async function refreshAll() {
-    await Promise.all([loadStats(), loadNews(), loadMemorySnapshot(), loadVisualization()]);
+    await Promise.all([loadStats(), loadNews(), loadMemorySnapshot(), loadVisualization(), loadHealthTrend()]);
   }
 
   async function openMilestoneModal() {
@@ -716,6 +735,10 @@ export default function LobsterPage() {
               <p className="hint">互动行为已写入服务端持久化状态。</p>
             </article>
           </section>
+
+          <div className="tab-content" data-tab="status">
+            <HealthTimelinePanel snapshot={healthTrendSnapshot} loading={healthTrendLoading} error={healthTrendError} />
+          </div>
 
           <section className="fade-in-up delay-3 tab-content" data-tab="achievements">
             <h3 style={{ margin: '0 0 12px 0' }}>🧬 进化程度</h3>
