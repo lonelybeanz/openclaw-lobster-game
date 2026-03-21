@@ -406,9 +406,36 @@ export type GrowthHeatmapItem = {
 export type HealthPeriod = '7d' | '30d' | '90d';
 
 export type HealthRecord = {
-  date: string;
+  timestamp: string;
+  loyalty: number;
+  event?: string;
   hunger: number;
   mood: number;
   fatigue: number;
   health: number;
+};
+
+export type HealthMetricTrend = 'rising' | 'falling' | 'stable';
+
+export type HealthTrendSnapshot = {
+  period: HealthPeriod;
+  records: HealthRecord[];
+  averages: {
+    hunger: number;
+    mood: number;
+    fatigue: number;
+    health: number;
+  };
+  trends: {
+    hunger: HealthMetricTrend;
+    mood: HealthMetricTrend;
+    fatigue: HealthMetricTrend;
+    health: HealthMetricTrend;
+  };
+  anomalies: Array<{
+    date: string;
+    metric: string;
+    value: number;
+    reason: string;
+  }>;
 };

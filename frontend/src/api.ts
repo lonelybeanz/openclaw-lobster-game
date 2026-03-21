@@ -1,4 +1,5 @@
 import type {
+  HealthTrendSnapshot,
   InteractResult,
   LobsterNewsItem,
   MemoryLlmEvalResponse,
@@ -138,4 +139,8 @@ export async function saveMemoryLlmEval(result: MemoryLlmEvalResponse): Promise<
 // 可视化快照
 export async function getVisualizationSnapshot(): Promise<VisualizationSnapshot> {
   return request('/lobster/visualization');
+}
+
+export async function getHealthTrend(period: '7d' | '30d' | '90d' = '30d'): Promise<HealthTrendSnapshot> {
+  return request(`/lobster/health/trend?period=${period}`);
 }
