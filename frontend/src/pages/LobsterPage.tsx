@@ -559,21 +559,27 @@ export default function LobsterPage() {
       <div className="bg-orb bg-orb-three" />
 
       <header className="header lobster-header glass-card fade-in-up">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <div style={{ fontSize: '48px', lineHeight: 1 }}>🦞</div>
+        <div className="lobster-header-summary">
+          <div className="lobster-header-emoji">🦞</div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '14px', color: '#aaa', marginBottom: '4px' }}>最近互动</div>
-            <div style={{ fontSize: '15px', color: '#fff' }}>{lastAction}</div>
+            <div className="lobster-header-description">最近互动</div>
+            <div className="lobster-header-value">{lastAction}</div>
           </div>
         </div>
         <button className="refresh-btn" type="button" onClick={() => void refreshAll()} disabled={loading || newsLoading}>
           {loading || newsLoading ? '同步中...' : '🔄'}
         </button>
       </header>
-      <div style={{display:"flex", gap:"8px", marginBottom:"15px", padding:"0 20px"}}>
-        <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="status"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("status")}>📊状态</button>
-        <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="memory"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("memory")}>💾记忆</button>
-        <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="news"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("news")}>📰资讯</button>
+      <div className="lobster-tabs" style={{ padding: '0 20px' }}>
+        <button className={`lobster-tab${activeTab === 'status' ? ' active' : ''}`} type="button" onClick={() => setActiveTab('status')}>
+          📊状态
+        </button>
+        <button className={`lobster-tab${activeTab === 'memory' ? ' active' : ''}`} type="button" onClick={() => setActiveTab('memory')}>
+          💾记忆
+        </button>
+        <button className={`lobster-tab${activeTab === 'news' ? ' active' : ''}`} type="button" onClick={() => setActiveTab('news')}>
+          📰资讯
+        </button>
       </div>
       {error ? <div className="panel error glass-card">数据加载失败：{error}</div> : null}
       {loading && !stats ? <div className="panel glass-card">正在加载龙虾状态...</div> : null}
