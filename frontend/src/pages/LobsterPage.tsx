@@ -631,20 +631,10 @@ export default function LobsterPage() {
             <article className="panel lobster-status-card glass-card fade-in-up delay-2">
               <h3>状态属性</h3>
 
-              <div className="status-list">
+              <div className="status-list" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                 <div className="status-item">
                   <div className="status-title-row">
-                    <span>🍤 饱食度 {sourceTip('来自: lobster-state.hunger')}</span>
-                    <strong>{view.hunger}</strong>
-                  </div>
-                  <div className="meter-track">
-                    <div className="meter-fill meter-fill-hunger" style={{ width: `${view.hunger}%` }} />
-                  </div>
-                </div>
-
-                <div className="status-item">
-                  <div className="status-title-row">
-                    <span>💖 心情 {sourceTip('来自: lobster-state.mood')}</span>
+                    <span>💖 心情 {sourceTip('心情 = 80 + min(20, totalTokens/50000)，基于使用量')}</span>
                     <strong>{view.mood}</strong>
                   </div>
                   <div className="meter-track">
@@ -654,7 +644,7 @@ export default function LobsterPage() {
 
                 <div className="status-item">
                   <div className="status-title-row">
-                    <span>😴 疲劳度 {sourceTip('来自: lobster-state.fatigue')}</span>
+                    <span>😴 疲劳度 {sourceTip('疲劳度 = totalTokens/10000，最高80，使用越多越疲劳')}</span>
                     <strong>{view.fatigue}</strong>
                   </div>
                   <div className="meter-track">
@@ -664,7 +654,7 @@ export default function LobsterPage() {
 
                 <div className="status-item">
                   <div className="status-title-row">
-                    <span>🤝 忠诚度 {sourceTip('来自: lobster-state.loyalty')}</span>
+                    <span>🤝 忠诚度 {sourceTip('忠诚度 = 50 + totalTokens/10000，最高100')}</span>
                     <strong>{view.loyalty}</strong>
                   </div>
                   <div className="meter-track">
@@ -744,6 +734,13 @@ export default function LobsterPage() {
       ) : null}
               <p className="hint">互动行为已写入服务端持久化状态。</p>
             </article>
+          
+
+            <VisualizationDashboard
+              snapshot={visualizationSnapshot}
+              loading={visualizationLoading}
+              error={visualizationError}
+            />
           </section>
 
           <section className="fade-in-up delay-3 tab-content" data-tab="evolution">
@@ -1047,11 +1044,6 @@ export default function LobsterPage() {
             </section>
 
             {/* 图表数据 */}
-            <VisualizationDashboard
-              snapshot={visualizationSnapshot}
-              loading={visualizationLoading}
-              error={visualizationError}
-            />
 
           </section>
 

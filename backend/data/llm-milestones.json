@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-19T02:08:24.698Z",
-  "expiresAt": "2026-03-20T02:08:24.699Z",
+  "generatedAt": "2026-03-20T11:24:55.093Z",
+  "expiresAt": "2026-03-21T11:24:55.093Z",
   "source": "fallback",
   "summary": "当前共生成 8 张动态成就卡，覆盖成长、脑力、技能、探索、社交、心流、守护者与进化八个维度。",
   "cards": [
@@ -30,13 +30,13 @@
       "description": "模型智力、上下文和记忆结构一起决定了这张脑力卡的厚度。",
       "nextHint": "继续积累会话和记忆，让脑力卡突破下一段位。",
       "level": "bronze",
-      "score": 50,
-      "progress": 50,
+      "score": 53,
+      "progress": 53,
       "maxProgress": 100,
-      "progressText": "50/100",
+      "progressText": "53/100",
       "unlocked": true,
       "metricLabel": "智能指数",
-      "metricValue": "50"
+      "metricValue": "53"
     },
     {
       "id": "skills",
@@ -53,7 +53,7 @@
       "progressText": "10/10",
       "unlocked": true,
       "metricLabel": "技能数量",
-      "metricValue": "16 项"
+      "metricValue": "15 项"
     },
     {
       "id": "exploration",
@@ -65,12 +65,12 @@
       "nextHint": "继续开启新话题和任务，让探索航线更长。",
       "level": "mythic",
       "score": 100,
-      "progress": 120,
+      "progress": 95,
       "maxProgress": 120,
-      "progressText": "120/120",
+      "progressText": "95/120",
       "unlocked": true,
       "metricLabel": "会话探索",
-      "metricValue": "657 会话 / 0 消息"
+      "metricValue": "95 会话 / 0 消息"
     },
     {
       "id": "social",
@@ -87,7 +87,7 @@
       "progressText": "150/150",
       "unlocked": true,
       "metricLabel": "亲密度",
-      "metricValue": "忠诚 100 / 深聊 37"
+      "metricValue": "忠诚 85 / 深聊 37"
     },
     {
       "id": "flow",
@@ -115,10 +115,10 @@
       "description": "连续天数、深夜陪伴和忠诚度，都会把守护者维度推向更高等级。",
       "nextHint": "再多几次稳定陪伴，这张卡会更有守护者气质。",
       "level": "bronze",
-      "score": 35,
-      "progress": 35,
+      "score": 31,
+      "progress": 31,
       "maxProgress": 100,
-      "progressText": "35/100",
+      "progressText": "31/100",
       "unlocked": false,
       "metricLabel": "陪伴守护",
       "metricValue": "连击 2 天 / 深夜 0 次"
