@@ -393,6 +393,7 @@ export type VisualizationSnapshot = {
       description: string;
     }>;
   };
+  evolutionScoreTrend: VisualizationPoint[];
 };
 
 // Timeline 相关类型（向后兼容）
