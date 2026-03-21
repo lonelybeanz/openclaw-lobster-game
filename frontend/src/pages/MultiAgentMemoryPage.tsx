@@ -21,7 +21,6 @@ const tabButtonStyle = (active: boolean) => ({
   background: active ? 'linear-gradient(135deg, rgba(56,189,248,0.34), rgba(16,185,129,0.28))' : 'rgba(255,255,255,0.08)',
   color: '#f8fafc',
   borderRadius: 999,
-  padding: '12px 18px',
   cursor: 'pointer',
   fontWeight: 700,
   whiteSpace: 'nowrap' as const,
@@ -278,7 +277,13 @@ export default function MultiAgentMemoryPage() {
       <section className="panel glass-card" style={{ marginBottom: 16 }}>
         <div className="multi-memory-tab-row">
           {tabs.map((tab) => (
-            <button key={tab.key} type="button" style={tabButtonStyle(activeTab === tab.key)} onClick={() => setActiveTab(tab.key)}>
+            <button
+              key={tab.key}
+              type="button"
+              className="multi-memory-tab-button"
+              style={tabButtonStyle(activeTab === tab.key)}
+              onClick={() => setActiveTab(tab.key)}
+            >
               <strong>{tab.shortLabel}</strong>
               <span>{tab.label}</span>
             </button>
