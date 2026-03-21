@@ -594,6 +594,9 @@ export default function LobsterPage() {
         <button className={`lobster-tab${activeTab === 'status' ? ' active' : ''}`} type="button" onClick={() => setActiveTab('status')}>
           📊状态
         </button>
+        <button className={`lobster-tab${activeTab === 'evolution' ? ' active' : ''}`} type="button" onClick={() => setActiveTab('evolution')}>
+          🧬进化
+        </button>
         <button className={`lobster-tab${activeTab === 'memory' ? ' active' : ''}`} type="button" onClick={() => setActiveTab('memory')}>
           💾记忆
         </button>

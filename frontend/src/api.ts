@@ -8,6 +8,7 @@ import type {
   LlmMilestonesResponse,
   SearchNewsResponse,
   VisualizationSnapshot,
+  HealthTrendSnapshot,
 } from './types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/admin-api';
