@@ -288,6 +288,13 @@ export type AchievementItem = Achievement & {
   achievedAt?: string;
 };
 
+export type AchievementUnlockHistoryItem = {
+  id: string;
+  name: string;
+  icon: string;
+  unlockedAt: string;
+};
+
 export type LlmMilestoneCard = {
   id: 'growth' | 'brain' | 'skills' | 'exploration' | 'social' | 'flow' | 'guardian' | 'evolution';
   category: string;

@@ -1,4 +1,5 @@
 import type {
+  AchievementUnlockHistoryItem,
   InteractResult,
   LobsterNewsItem,
   MemoryLlmEvalResponse,
@@ -88,6 +89,10 @@ export async function interact(action: 'feed' | 'train' | 'rest'): Promise<Inter
 
 export async function getAchievements(): Promise<any[]> {
   return request('/lobster/achievements');
+}
+
+export async function getAchievementUnlockHistory(): Promise<AchievementUnlockHistoryItem[]> {
+  return request('/lobster/achievement-unlock-history');
 }
 
 export async function getSkills(): Promise<any> {

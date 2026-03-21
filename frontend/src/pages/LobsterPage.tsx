@@ -24,6 +24,7 @@ import type {
   RandomEvent,
   VisualizationSnapshot,
 } from '../types';
+import AchievementTimeline from '../components/AchievementTimeline';
 import MemoryScorePanel from '../components/MemoryScorePanel';
 import VisualizationDashboard from '../components/VisualizationDashboard';
 
@@ -180,7 +181,7 @@ export default function LobsterPage() {
   const [delta, setDelta] = useState<DeltaState>(initialDelta);
   const [lastAction, setLastAction] = useState<string>('等待互动');
   const [expandedNewsId, setExpandedNewsId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'status' | 'memory' | 'news'>('status');
+  const [activeTab, setActiveTab] = useState<'status' | 'evolution' | 'memory' | 'news'>('status');
   const [newsSubTab, setNewsSubTab] = useState<'github' | 'search'>('github');
   const [timelinePeriod, setTimelinePeriod] = useState<'7d' | '30d' | '90d'>('7d');
   const [showFormulaGuide, setShowFormulaGuide] = useState(false);
@@ -572,6 +573,7 @@ export default function LobsterPage() {
       </header>
       <div style={{display:"flex", gap:"8px", marginBottom:"15px", padding:"0 20px"}}>
         <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="status"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("status")}>📊状态</button>
+        <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="evolution"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("evolution")}>🧬进化</button>
         <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="memory"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("memory")}>💾记忆</button>
         <button style={{flex:1, padding:"10px", border:"none", borderRadius:"8px", background:activeTab==="news"?"linear-gradient(135deg, #667eea, #764ba2)":"rgba(255,255,255,0.1)", color:"white", cursor:"pointer"}} onClick={()=>setActiveTab("news")}>📰资讯</button>
       </div>
@@ -717,7 +719,7 @@ export default function LobsterPage() {
             </article>
           </section>
 
-          <section className="fade-in-up delay-3 tab-content" data-tab="achievements">
+          <section className="fade-in-up delay-3 tab-content" data-tab="evolution">
             <h3 style={{ margin: '0 0 12px 0' }}>🧬 进化程度</h3>
             <div
               className="kpi-grid lobster-kpi-grid"
@@ -870,6 +872,7 @@ export default function LobsterPage() {
                 <h2>{displayValue(view.limbs?.endurance)}</h2>
               </article>
             </div>
+            <AchievementTimeline />
           </section>
 
           <section className="fade-in-up delay-3 tab-content" data-tab="memory">
