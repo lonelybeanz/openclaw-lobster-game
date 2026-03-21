@@ -26,6 +26,7 @@ import type {
   RandomEvent,
   VisualizationSnapshot,
 } from '../types';
+import AchievementTimeline from '../components/AchievementTimeline';
 import MemoryScorePanel from '../components/MemoryScorePanel';
 import VisualizationDashboard from '../components/VisualizationDashboard';
 import HealthTimelinePanel from '../components/HealthTimelinePanel';
@@ -737,11 +738,7 @@ export default function LobsterPage() {
             </article>
           </section>
 
-          <div className="tab-content" data-tab="status">
-            <HealthTimelinePanel snapshot={healthTrendSnapshot} loading={healthTrendLoading} error={healthTrendError} />
-          </div>
-
-          <section className="fade-in-up delay-3 tab-content" data-tab="achievements">
+          <section className="fade-in-up delay-3 tab-content" data-tab="evolution">
             <h3 style={{ margin: '0 0 12px 0' }}>🧬 进化程度</h3>
             <div
               className="kpi-grid lobster-kpi-grid"
@@ -894,6 +891,7 @@ export default function LobsterPage() {
                 <h2>{displayValue(view.limbs?.endurance)}</h2>
               </article>
             </div>
+            <AchievementTimeline />
           </section>
 
           <section className="fade-in-up delay-3 tab-content" data-tab="memory">
