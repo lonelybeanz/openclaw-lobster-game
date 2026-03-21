@@ -2,6 +2,9 @@ import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { getMemoryScore } from './memoryScore';
 import { analyzeSkills } from './skillsAnalyzer';
+import { analyzeMemory } from './memoryAnalyzer';
+import { getModelBrainMapping } from './modelMapper';
+import { buildEvolutionScoreTrend } from './evolutionScore';
 
 type TokenStatsHistoryItem = {
   key?: string;
@@ -75,6 +78,7 @@ export interface VisualizationSnapshot {
       description: string;
     }>;
   };
+  evolutionScoreTrend: VisualizationPoint[];
 }
 
 const TOKEN_STATS_FILE_CANDIDATES = [
@@ -198,10 +202,12 @@ function buildWeeklyTrend(increments: TokenIncrementItem[]): VisualizationPoint[
 }
 
 export async function getVisualizationSnapshot(): Promise<VisualizationSnapshot> {
-  const [tokenFile, memorySnapshot, skillsStats] = await Promise.all([
+  const [tokenFile, memorySnapshot, skillsStats, memoryStats, modelMapping] = await Promise.all([
     readTokenStatsFile(),
     getMemoryScore(),
     analyzeSkills(),
+    analyzeMemory(),
+    getModelBrainMapping(),
   ]);
 
   const history = Array.isArray(tokenFile.history) ? tokenFile.history : [];
@@ -263,6 +269,18 @@ export async function getVisualizationSnapshot(): Promise<VisualizationSnapshot>
       };
     });
 
+  const evolutionScoreTrend = buildEvolutionScoreTrend({
+    days: 30,
+    totalTokens: Math.max(0, Math.round(Number(tokenFile.totalTokens) || 0)),
+    totalSessions: Math.max(0, Math.round(Number(tokenFile.sessions) || 0)),
+    increments: Array.isArray(tokenFile.increments) ? tokenFile.increments : [],
+    history,
+    memoryHistory: memorySnapshot.history,
+    memoryFileCount: Math.max(0, memoryStats.totalFiles),
+    shallowMemoryQuality: Math.max(0, Math.round(Number(memoryStats.shallowQuality) || 0)),
+    modelMapping,
+  });
+
   const skillCategoryMap = new Map<string, number>();
   for (const skill of skillsStats.skills) {
     const key = skill.category || '其他';
@@ -308,5 +326,6 @@ export async function getVisualizationSnapshot(): Promise<VisualizationSnapshot>
         description: skill.description,
       })),
     },
+    evolutionScoreTrend,
   };
 }

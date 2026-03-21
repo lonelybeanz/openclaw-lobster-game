@@ -26,6 +26,7 @@ import type {
 } from '../types';
 import MemoryScorePanel from '../components/MemoryScorePanel';
 import VisualizationDashboard from '../components/VisualizationDashboard';
+import EvolutionTrendChart from '../components/EvolutionTrendChart';
 
 type ActionType = 'feed' | 'train' | 'rest';
 
@@ -756,6 +757,7 @@ export default function LobsterPage() {
                 </article>
               ))}
             </div>
+            <EvolutionTrendChart trend={visualizationSnapshot?.evolutionScoreTrend ?? []} />
             <h4 style={{ margin: '0 0 12px 0' }}>Benchmark 评测整合</h4>
             <div
               className="kpi-grid lobster-kpi-grid"
