@@ -11,10 +11,12 @@ import {
   getMilestones,
   getSearchResult,
   getVisualizationSnapshot,
+  getLobsterPond,
   interact,
   saveMemoryLlmEval,
   searchNews,
 } from '../api';
+import type { LobsterAgent } from '../api';
 import type {
   AchievementItem,
   HealthTrendSnapshot,
@@ -26,10 +28,10 @@ import type {
   RandomEvent,
   VisualizationSnapshot,
 } from '../types';
-import AchievementTimeline from '../components/AchievementTimeline';
 import MemoryScorePanel from '../components/MemoryScorePanel';
 import VisualizationDashboard from '../components/VisualizationDashboard';
 import EvolutionTrendChart from '../components/EvolutionTrendChart';
+import GameDashboard from '../components/GameDashboard';
 
 type ActionType = 'feed' | 'train' | 'rest';
 
@@ -169,6 +171,8 @@ export default function LobsterPage() {
   const [memorySnapshot, setMemorySnapshot] = useState<MemoryScoreSnapshot | null>(null);
   const [visualizationSnapshot, setVisualizationSnapshot] = useState<VisualizationSnapshot | null>(null);
   const [healthTrendSnapshot, setHealthTrendSnapshot] = useState<HealthTrendSnapshot | null>(null);
+  const [lobsterAgents, setLobsterAgents] = useState<LobsterAgent[]>([]);
+  const [lobsterAgentsLoading, setLobsterAgentsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [newsLoading, setNewsLoading] = useState(true);
   const [memoryLoading, setMemoryLoading] = useState(true);
@@ -187,7 +191,7 @@ export default function LobsterPage() {
   const [delta, setDelta] = useState<DeltaState>(initialDelta);
   const [lastAction, setLastAction] = useState<string>('等待互动');
   const [expandedNewsId, setExpandedNewsId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'status' | 'evolution' | 'memory' | 'news'>('status');
+  const [activeTab, setActiveTab] = useState<'status' | 'evolution' | 'memory' | 'news' | 'dashboard'>('dashboard');
   const [newsSubTab, setNewsSubTab] = useState<'github' | 'search'>('github');
   const [timelinePeriod, setTimelinePeriod] = useState<'7d' | '30d' | '90d'>('7d');
   const [showFormulaGuide, setShowFormulaGuide] = useState(false);
@@ -282,8 +286,27 @@ export default function LobsterPage() {
     }
   }
 
+  async function loadLobsterAgents() {
+    try {
+      setLobsterAgentsLoading(true);
+      const data = await getLobsterPond();
+      setLobsterAgents(data);
+    } catch (e) {
+      console.error('加载龙虾群失败:', e);
+    } finally {
+      setLobsterAgentsLoading(false);
+    }
+  }
+
   async function refreshAll() {
-    await Promise.all([loadStats(), loadNews(), loadMemorySnapshot(), loadVisualization(), loadHealthTrend()]);
+    await Promise.all([
+      loadStats(), 
+      loadNews(), 
+      loadMemorySnapshot(), 
+      loadVisualization(), 
+      loadHealthTrend(),
+      loadLobsterAgents()
+    ]);
   }
 
   async function openMilestoneModal() {
@@ -591,6 +614,9 @@ export default function LobsterPage() {
         </button>
       </header>
       <div className="lobster-tabs" style={{ padding: '0 20px' }}>
+        <button className={`lobster-tab${activeTab === 'dashboard' ? ' active' : ''}`} type="button" onClick={() => setActiveTab('dashboard')}>
+          🎮仪表盘
+        </button>
         <button className={`lobster-tab${activeTab === 'status' ? ' active' : ''}`} type="button" onClick={() => setActiveTab('status')}>
           📊状态
         </button>
@@ -610,140 +636,271 @@ export default function LobsterPage() {
 
       {view ? (
         <>
-          <section className="lobster-main-grid tab-content" data-tab="status">
-            <article className="panel lobster-avatar-card gradient-card fade-in-up delay-1">
-              <div className="emoji-wrap" aria-hidden="true">
-                <span className="sparkle sparkle-left">✨</span>
-                <div className="lobster-avatar">🦞</div>
-                <span className="sparkle sparkle-right">✨</span>
-              </div>
-              <p className="lobster-level">Lv.{view.level} {sourceTip('来自: Tokens / 50000')}</p>
-              <h2>成长进度</h2>
-              <div className="meter-track meter-track-exp">
-                <div className="meter-fill meter-fill-exp" style={{ width: `${expRatio}%` }} />
-              </div>
-              <p className="meter-text">
-                EXP {formatNumber(view.experience)} / {formatNumber(view.maxExperience)} {sourceTip('来自: totalTokens % 50000')}
-              </p>
-              <p className="lobster-age">寿命：{view.age} 天</p>
-            </article>
-
-            <article className="panel lobster-status-card glass-card fade-in-up delay-2">
-              <h3>状态属性</h3>
-
-              <div className="status-list" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                <div className="status-item">
-                  <div className="status-title-row">
-                    <span>💖 心情 {sourceTip('心情 = 80 + min(20, totalTokens/50000)，基于使用量')}</span>
-                    <strong>{view.mood}</strong>
-                  </div>
-                  <div className="meter-track">
-                    <div className="meter-fill meter-fill-mood" style={{ width: `${view.mood}%` }} />
-                  </div>
-                </div>
-
-                <div className="status-item">
-                  <div className="status-title-row">
-                    <span>😴 疲劳度 {sourceTip('疲劳度 = totalTokens/10000，最高80，使用越多越疲劳')}</span>
-                    <strong>{view.fatigue}</strong>
-                  </div>
-                  <div className="meter-track">
-                    <div className="meter-fill meter-fill-fatigue" style={{ width: `${view.fatigue}%` }} />
-                  </div>
-                </div>
-
-                <div className="status-item">
-                  <div className="status-title-row">
-                    <span>🤝 忠诚度 {sourceTip('忠诚度 = 50 + totalTokens/10000，最高100')}</span>
-                    <strong>{view.loyalty}</strong>
-                  </div>
-                  <div className="meter-track">
-                    <div className="meter-fill meter-fill-loyalty" style={{ width: `${view.loyalty}%` }} />
-                  </div>
-                </div>
-              </div>
-
-              <div className="milestone-row">
-                <button type="button" onClick={() => void openMilestoneModal()} className="milestone-btn">
-                  🎯 成长之路
-                </button>
-              </div>
-              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                <input
-                  type="text"
-                  value={deepTalkInput}
-                  onChange={(e) => setDeepTalkInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && void handleDeepTalk()}
-                  placeholder="想对小龙虾说什么？"
-                  style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1px solid #667eea', background: 'rgba(255,255,255,0.1)', color: 'white', fontSize: '14px' }}
-                />
-                <button type="button" onClick={() => void handleDeepTalk()} disabled={deepTalkLoading} className="milestone-btn" style={{ whiteSpace: 'nowrap' }}>
-                  {deepTalkLoading ? '发送中...' : '💬 发送'}
-                </button>
-              </div>
-              {randomEventPrompt ? (
-                <div className="random-event-tip">
-                  <p className="random-event-title">🎲 {randomEventPrompt.title}</p>
-                  <p>{randomEventPrompt.description}</p>
-                  {formatEventEffect(randomEventPrompt) ? <p className="random-event-effect">{formatEventEffect(randomEventPrompt)}</p> : null}
-                </div>
-              ) : null}
-
-      {showSearchTimeoutModal ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="搜索等待确认"
-          onClick={handleCancelSearchWait}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.6)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1100,
-            padding: '16px',
-          }}
-        >
-          <div
-            className="glass-card"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: 'min(420px, 100%)',
-              borderRadius: '16px',
-              padding: '20px',
-              border: '1px solid rgba(255,255,255,0.18)',
-              background: 'rgba(9, 14, 28, 0.95)',
-            }}
-          >
-            <h3 style={{ margin: '0 0 10px 0' }}>搜索还在进行中</h3>
-            <p style={{ margin: '0 0 16px 0', color: '#cfd6ff', lineHeight: 1.6 }}>
-              OpenClaw 搜索已超过 60 秒，是否继续等待？
-            </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-              <button type="button" onClick={handleCancelSearchWait} className="milestone-btn" style={{ background: 'rgba(255,255,255,0.08)' }}>
-                取消
-              </button>
-              <button type="button" onClick={() => void handleContinueSearch()} className="milestone-btn">
-                继续等待
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-              <p className="hint">互动行为已写入服务端持久化状态。</p>
-            </article>
-          
-
-            <VisualizationDashboard
-              snapshot={visualizationSnapshot}
-              loading={visualizationLoading}
-              error={visualizationError}
-            />
+          {/* 🎮 游戏化仪表盘 Tab */}
+          <section className="tab-content dashboard-tab-content" data-tab="dashboard" style={{ display: activeTab === 'dashboard' ? 'block' : 'none' }}>
+            <GameDashboard />
           </section>
 
-          <section className="fade-in-up delay-3 tab-content" data-tab="evolution">
+          <section className="lobster-main-grid tab-content" data-tab="status" style={{ display: activeTab === 'status' ? 'grid' : 'none' }}>
+            {/* 第一排：成长进度 + 状态属性 */}
+            <div className="status-top-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', gridColumn: '1 / -1' }}>
+              <article className="panel lobster-avatar-card gradient-card fade-in-up delay-1">
+                <div className="emoji-wrap" aria-hidden="true">
+                  <span className="sparkle sparkle-left">✨</span>
+                  <div className="lobster-avatar">🦞</div>
+                  <span className="sparkle sparkle-right">✨</span>
+                </div>
+                <p className="lobster-level">Lv.{view.level} {sourceTip('来自: Tokens / 50000')}</p>
+                <h2>成长进度</h2>
+                <div className="meter-track meter-track-exp">
+                  <div className="meter-fill meter-fill-exp" style={{ width: `${expRatio}%` }} />
+                </div>
+                <p className="meter-text">
+                  EXP {formatNumber(view.experience)} / {formatNumber(view.maxExperience)} {sourceTip('来自: totalTokens % 50000')}
+                </p>
+                <p className="lobster-age">寿命：{view.age} 天</p>
+              </article>
+
+              <article className="panel lobster-status-card glass-card fade-in-up delay-2">
+                <h3>状态属性</h3>
+
+                <div className="status-list" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                  <div className="status-item">
+                    <div className="status-title-row">
+                      <span>💖 心情 {sourceTip('心情 = 80 + min(20, totalTokens/50000)，基于使用量')}</span>
+                      <strong>{view.mood}</strong>
+                    </div>
+                    <div className="meter-track">
+                      <div className="meter-fill meter-fill-mood" style={{ width: `${view.mood}%` }} />
+                    </div>
+                  </div>
+
+                  <div className="status-item">
+                    <div className="status-title-row">
+                      <span>😴 疲劳度 {sourceTip('疲劳度 = totalTokens/10000，最高80，使用越多越疲劳')}</span>
+                      <strong>{view.fatigue}</strong>
+                    </div>
+                    <div className="meter-track">
+                      <div className="meter-fill meter-fill-fatigue" style={{ width: `${view.fatigue}%` }} />
+                    </div>
+                  </div>
+
+                  <div className="status-item">
+                    <div className="status-title-row">
+                      <span>🤝 忠诚度 {sourceTip('忠诚度 = 50 + totalTokens/10000，最高100')}</span>
+                      <strong>{view.loyalty}</strong>
+                    </div>
+                    <div className="meter-track">
+                      <div className="meter-fill meter-fill-loyalty" style={{ width: `${view.loyalty}%` }} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="milestone-row">
+                  <button type="button" onClick={() => void openMilestoneModal()} className="milestone-btn">
+                    🎯 成长之路
+                  </button>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                  <input
+                    type="text"
+                    value={deepTalkInput}
+                    onChange={(e) => setDeepTalkInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && void handleDeepTalk()}
+                    placeholder="想对小龙虾说什么？"
+                    style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1px solid #667eea', background: 'rgba(255,255,255,0.1)', color: 'white', fontSize: '14px' }}
+                  />
+                  <button type="button" onClick={() => void handleDeepTalk()} disabled={deepTalkLoading} className="milestone-btn" style={{ whiteSpace: 'nowrap' }}>
+                    {deepTalkLoading ? '发送中...' : '💬 发送'}
+                  </button>
+                </div>
+                {randomEventPrompt ? (
+                  <div className="random-event-tip">
+                    <p className="random-event-title">🎲 {randomEventPrompt.title}</p>
+                    <p>{randomEventPrompt.description}</p>
+                    {formatEventEffect(randomEventPrompt) ? <p className="random-event-effect">{formatEventEffect(randomEventPrompt)}</p> : null}
+                  </div>
+                ) : null}
+                <p className="hint">互动行为已写入服务端持久化状态。</p>
+              </article>
+            </div>
+
+            {/* 搜索超时弹窗 - 移到状态模块外部 */}
+            {showSearchTimeoutModal ? (
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-label="搜索等待确认"
+                onClick={handleCancelSearchWait}
+                style={{
+                  position: 'fixed',
+                  inset: 0,
+                  background: 'rgba(0, 0, 0, 0.6)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 1100,
+                  padding: '16px',
+                }}
+              >
+                <div
+                  className="glass-card"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    width: 'min(420px, 100%)',
+                    borderRadius: '16px',
+                    padding: '20px',
+                    border: '1px solid rgba(255,255,255,0.18)',
+                    background: 'rgba(9, 14, 28, 0.95)',
+                  }}
+                >
+                  <h3 style={{ margin: '0 0 10px 0' }}>搜索还在进行中</h3>
+                  <p style={{ margin: '0 0 16px 0', color: '#cfd6ff', lineHeight: 1.6 }}>
+                    OpenClaw 搜索已超过 60 秒，是否继续等待？
+                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                    <button type="button" onClick={handleCancelSearchWait} className="milestone-btn" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                      取消
+                    </button>
+                    <button type="button" onClick={() => void handleContinueSearch()} className="milestone-btn">
+                      继续等待
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {/* 龙虾群状态概览 - 详细版 */}
+            <div style={{ gridColumn: '1 / -1', marginTop: '20px' }}>
+              <h3 style={{ margin: '0 0 12px 0', color: '#fff' }}>🦞 龙虾群状态（点击照顾）</h3>
+              <div className="lobster-agents-detailed" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                {lobsterAgentsLoading ? (
+                  <div className="panel glass-card">加载中...</div>
+                ) : lobsterAgents.length === 0 ? (
+                  <div className="panel glass-card">暂无龙虾数据</div>
+                ) : (
+                  lobsterAgents.map((agent) => (
+                    <div key={agent.id} className="panel glass-card lobster-agent-card" style={{ borderTop: `4px solid ${agent.color}` }}>
+                      {/* 头部信息 */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                        <span style={{ fontSize: '36px' }}>{agent.emoji}</span>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 600, fontSize: '16px' }}>{agent.name}</div>
+                          <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                            {agent.personality === 'diligent' && '勤奋的'}
+                            {agent.personality === 'lazy' && '懒散的'}
+                            {agent.personality === 'curious' && '好奇的'}
+                            {agent.personality === 'cautious' && '谨慎的'}
+                            {agent.personality === 'adventurous' && '冒险的'}
+                            {agent.personality === 'social' && '社交的'}
+                            {agent.currentAction}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '20px', fontWeight: 700, color: agent.color }}>Lv.{agent.status.level}</div>
+                          <div style={{ fontSize: '11px', color: '#9ca3af' }}>阶段 {agent.evolutionStage}/5</div>
+                        </div>
+                      </div>
+                      
+                      {/* 成长进度 */}
+                      <div style={{ marginBottom: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}>
+                          <span>成长进度</span>
+                          <span>{agent.status.growth} XP</span>
+                        </div>
+                        <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div style={{ 
+                            width: `${Math.min(100, (agent.status.growth % 100))}%`, 
+                            height: '100%', 
+                            background: `linear-gradient(90deg, ${agent.color}, ${agent.color}80)`,
+                            borderRadius: '3px'
+                          }} />
+                        </div>
+                      </div>
+                      
+                      {/* 状态条 */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
+                          <span style={{ width: '40px' }}>❤️ 体力</span>
+                          <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                            <div style={{ width: `${agent.status.hp}%`, height: '100%', background: '#22c55e', borderRadius: '2px' }} />
+                          </div>
+                          <span style={{ width: '30px', textAlign: 'right' }}>{agent.status.hp}%</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
+                          <span style={{ width: '40px' }}>🍖 饱食</span>
+                          <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                            <div style={{ width: `${100 - agent.status.hunger}%`, height: '100%', background: agent.status.hunger > 60 ? '#ef4444' : '#f59e0b', borderRadius: '2px' }} />
+                          </div>
+                          <span style={{ width: '30px', textAlign: 'right' }}>{100 - agent.status.hunger}%</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
+                          <span style={{ width: '40px' }}>😊 心情</span>
+                          <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                            <div style={{ width: `${agent.status.mood}%`, height: '100%', background: '#ec4899', borderRadius: '2px' }} />
+                          </div>
+                          <span style={{ width: '30px', textAlign: 'right' }}>{agent.status.mood}%</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
+                          <span style={{ width: '40px' }}>⚡ 能量</span>
+                          <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                            <div style={{ width: `${agent.status.energy}%`, height: '100%', background: '#3b82f6', borderRadius: '2px' }} />
+                          </div>
+                          <span style={{ width: '30px', textAlign: 'right' }}>{agent.status.energy}%</span>
+                        </div>
+                      </div>
+                      
+                      {/* 操作按钮 */}
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button 
+                          onClick={async () => {
+                            const { feedLobster } = await import('../api');
+                            await feedLobster(agent.id);
+                            void loadLobsterAgents();
+                          }}
+                          style={{ flex: 1, padding: '8px', background: 'linear-gradient(135deg, #f59e0b, #fbbf24)', border: 'none', borderRadius: '8px', color: 'white', fontSize: '12px', cursor: 'pointer' }}
+                        >
+                          🍖 喂食
+                        </button>
+                        <button 
+                          onClick={async () => {
+                            const { trainLobster } = await import('../api');
+                            await trainLobster(agent.id);
+                            void loadLobsterAgents();
+                          }}
+                          style={{ flex: 1, padding: '8px', background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)', border: 'none', borderRadius: '8px', color: 'white', fontSize: '12px', cursor: 'pointer' }}
+                        >
+                          💪 训练
+                        </button>
+                        <button 
+                          onClick={async () => {
+                            const { restLobster } = await import('../api');
+                            await restLobster(agent.id);
+                            void loadLobsterAgents();
+                          }}
+                          style={{ flex: 1, padding: '8px', background: 'linear-gradient(135deg, #3b82f6, #60a5fa)', border: 'none', borderRadius: '8px', color: 'white', fontSize: '12px', cursor: 'pointer' }}
+                        >
+                          😴 休息
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* 数据可视化面板 - Token趋势/技能分布 */}
+            <div style={{ gridColumn: '1 / -1', marginTop: '20px' }}>
+              <h3 style={{ margin: '0 0 12px 0', color: '#fff' }}>📊 数据统计</h3>
+              <VisualizationDashboard
+                snapshot={visualizationSnapshot}
+                loading={visualizationLoading}
+                error={visualizationError}
+              />
+            </div>
+          </section>
+
+          <section className="fade-in-up delay-3 tab-content" data-tab="evolution" style={{ display: activeTab === 'evolution' ? 'block' : 'none' }}>
             <h3 style={{ margin: '0 0 12px 0' }}>🧬 进化程度</h3>
             <div
               className="kpi-grid lobster-kpi-grid"
@@ -897,10 +1054,9 @@ export default function LobsterPage() {
                 <h2>{displayValue(view.limbs?.endurance)}</h2>
               </article>
             </div>
-            <AchievementTimeline />
           </section>
 
-          <section className="fade-in-up delay-3 tab-content" data-tab="memory">
+          <section className="fade-in-up delay-3 tab-content" data-tab="memory" style={{ display: activeTab === 'memory' ? 'block' : 'none' }}>
             <div className="memory-overview">
               <section className="panel glass-card memory-overview-hero">
                 <div className="memory-overview-badge">Memory Overview</div>
@@ -1047,7 +1203,7 @@ export default function LobsterPage() {
 
           </section>
 
-          <section className="panel glass-card lobster-news-panel fade-in-up delay-3 tab-content" data-tab="news">
+          <section className="panel glass-card lobster-news-panel fade-in-up delay-3 tab-content" data-tab="news" style={{ display: activeTab === 'news' ? 'block' : 'none' }}>
             {/* 子标签页 */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
               <button 

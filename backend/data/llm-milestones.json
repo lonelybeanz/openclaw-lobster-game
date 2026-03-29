@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-20T11:24:55.093Z",
-  "expiresAt": "2026-03-21T11:24:55.093Z",
+  "generatedAt": "2026-03-28T02:08:40.364Z",
+  "expiresAt": "2026-03-29T02:08:40.364Z",
   "source": "fallback",
   "summary": "当前共生成 8 张动态成就卡，覆盖成长、脑力、技能、探索、社交、心流、守护者与进化八个维度。",
   "cards": [
@@ -46,14 +46,14 @@
       "headline": "技能点正在从单点解锁走向体系化",
       "description": "掌握的技能越多，越能支撑更复杂的工作流和更稳定的输出。",
       "nextHint": "补足技能短板，技能卡会更接近完整图谱。",
-      "level": "mythic",
-      "score": 100,
-      "progress": 10,
+      "level": "bronze",
+      "score": 30,
+      "progress": 3,
       "maxProgress": 10,
-      "progressText": "10/10",
+      "progressText": "3/10",
       "unlocked": true,
       "metricLabel": "技能数量",
-      "metricValue": "15 项"
+      "metricValue": "3 项"
     },
     {
       "id": "exploration",
@@ -65,12 +65,12 @@
       "nextHint": "继续开启新话题和任务，让探索航线更长。",
       "level": "mythic",
       "score": 100,
-      "progress": 95,
+      "progress": 93,
       "maxProgress": 120,
-      "progressText": "95/120",
+      "progressText": "93/120",
       "unlocked": true,
       "metricLabel": "会话探索",
-      "metricValue": "95 会话 / 0 消息"
+      "metricValue": "93 会话 / 0 消息"
     },
     {
       "id": "social",
@@ -87,7 +87,7 @@
       "progressText": "150/150",
       "unlocked": true,
       "metricLabel": "亲密度",
-      "metricValue": "忠诚 85 / 深聊 37"
+      "metricValue": "忠诚 100 / 深聊 37"
     },
     {
       "id": "flow",
@@ -115,10 +115,10 @@
       "description": "连续天数、深夜陪伴和忠诚度，都会把守护者维度推向更高等级。",
       "nextHint": "再多几次稳定陪伴，这张卡会更有守护者气质。",
       "level": "bronze",
-      "score": 31,
-      "progress": 31,
+      "score": 35,
+      "progress": 35,
       "maxProgress": 100,
-      "progressText": "31/100",
+      "progressText": "35/100",
       "unlocked": false,
       "metricLabel": "陪伴守护",
       "metricValue": "连击 2 天 / 深夜 0 次"
@@ -132,13 +132,13 @@
       "description": "进化不是单一指标，而是能力、经验和记忆长期叠加后的结果。",
       "nextHint": "继续积累经验与记忆，进化卡会解锁更高形态。",
       "level": "bronze",
-      "score": 42,
-      "progress": 60,
+      "score": 41,
+      "progress": 58,
       "maxProgress": 150,
-      "progressText": "60/150",
+      "progressText": "58/150",
       "unlocked": true,
       "metricLabel": "等级与记忆",
-      "metricValue": "Lv.1 / 记忆 99"
+      "metricValue": "Lv.1 / 记忆 96"
     }
   ]
 }

@@ -158,7 +158,7 @@ export default function VisualizationDashboard({ snapshot, loading, error }: Pro
   };
 
   return (
-    <section className="visualization-panel fade-in-up delay-3 tab-content" data-tab="visualization">
+    <section className="visualization-panel fade-in-up delay-3">
       <article className="panel glass-card visualization-hero">
         <div>
           <div className="memory-overview-badge">Visualization</div>

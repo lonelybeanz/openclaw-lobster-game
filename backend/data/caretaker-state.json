@@ -1,0 +1,229 @@
+{
+  "name": "养殖师",
+  "level": "novice",
+  "levelNumber": 3,
+  "experience": 280,
+  "maxExperience": 400,
+  "skills": {
+    "feeding": 10,
+    "training": 10,
+    "cleaning": 10,
+    "observing": 10,
+    "evolving": 5
+  },
+  "stats": {
+    "totalActions": 28,
+    "feedCount": 0,
+    "trainCount": 0,
+    "restCount": 0,
+    "cleanCount": 20,
+    "observeCount": 8,
+    "evolveCount": 0,
+    "streakDays": 0,
+    "lastActiveDate": "2026-03-28"
+  },
+  "recentActions": [
+    {
+      "id": "action-1774666526955",
+      "timestamp": "2026-03-28T02:55:26.955Z",
+      "type": "observe",
+      "details": "仔细观察了状态变化",
+      "expGained": 5
+    },
+    {
+      "id": "action-1774666526645",
+      "timestamp": "2026-03-28T02:55:26.645Z",
+      "type": "observe",
+      "details": "分析了行为模式",
+      "expGained": 5
+    },
+    {
+      "id": "action-1774666526359",
+      "timestamp": "2026-03-28T02:55:26.359Z",
+      "type": "observe",
+      "details": "记录了成长数据",
+      "expGained": 5
+    },
+    {
+      "id": "action-1774666526150",
+      "timestamp": "2026-03-28T02:55:26.150Z",
+      "type": "observe",
+      "details": "仔细观察了状态变化",
+      "expGained": 5
+    },
+    {
+      "id": "action-1774666525893",
+      "timestamp": "2026-03-28T02:55:25.893Z",
+      "type": "observe",
+      "details": "记录了成长数据",
+      "expGained": 5
+    },
+    {
+      "id": "action-1774666525602",
+      "timestamp": "2026-03-28T02:55:25.602Z",
+      "type": "observe",
+      "details": "仔细观察了状态变化",
+      "expGained": 5
+    },
+    {
+      "id": "action-1774666525299",
+      "timestamp": "2026-03-28T02:55:25.299Z",
+      "type": "observe",
+      "details": "分析了行为模式",
+      "expGained": 5
+    },
+    {
+      "id": "action-1774666525027",
+      "timestamp": "2026-03-28T02:55:25.027Z",
+      "type": "observe",
+      "details": "分析了行为模式",
+      "expGained": 5
+    },
+    {
+      "id": "action-1774666524014",
+      "timestamp": "2026-03-28T02:55:24.014Z",
+      "type": "clean",
+      "details": "整理了生活环境",
+      "expGained": 12
+    },
+    {
+      "id": "action-1774666523851",
+      "timestamp": "2026-03-28T02:55:23.851Z",
+      "type": "clean",
+      "details": "更换了新鲜的水质",
+      "expGained": 12
+    },
+    {
+      "id": "action-1774666523658",
+      "timestamp": "2026-03-28T02:55:23.658Z",
+      "type": "clean",
+      "details": "更换了新鲜的水质",
+      "expGained": 12
+    },
+    {
+      "id": "action-1774666523492",
+      "timestamp": "2026-03-28T02:55:23.492Z",
+      "type": "clean",
+      "details": "彻底清理了池塘",
+      "expGained": 12
+    },
+    {
+      "id": "action-1774666523325",
+      "timestamp": "2026-03-28T02:55:23.325Z",
+      "type": "clean",
+      "details": "更换了新鲜的水质",
+      "expGained": 12
+    },
+    {
+      "id": "action-1774666523147",
+      "timestamp": "2026-03-28T02:55:23.147Z",
+      "type": "clean",
+      "details": "彻底清理了池塘",
+      "expGained": 12
+    },
+    {
+      "id": "action-1774666522974",
+      "timestamp": "2026-03-28T02:55:22.974Z",
+      "type": "clean",
+      "details": "彻底清理了池塘",
+      "expGained": 12
+    },
+    {
+      "id": "action-1774666522810",
+      "timestamp": "2026-03-28T02:55:22.810Z",
+      "type": "clean",
+      "details": "更换了新鲜的水质",
+      "expGained": 12
+    },
+    {
+      "id": "action-1774666522627",
+      "timestamp": "2026-03-28T02:55:22.627Z",
+      "type": "clean",
+      "details": "整理了生活环境",
+      "expGained": 12
+    },
+    {
+      "id": "action-1774666522342",
+      "timestamp": "2026-03-28T02:55:22.342Z",
+      "type": "clean",
+      "details": "彻底清理了池塘",
+      "expGained": 12
+    },
+    {
+      "id": "action-1774666522159",
+      "timestamp": "2026-03-28T02:55:22.159Z",
+      "type": "clean",
+      "details": "整理了生活环境",
+      "expGained": 12
+    },
+    {
+      "id": "action-1774666521940",
+      "timestamp": "2026-03-28T02:55:21.940Z",
+      "type": "clean",
+      "details": "整理了生活环境",
+      "expGained": 12
+    },
+    {
+      "id": "action-1774666521809",
+      "timestamp": "2026-03-28T02:55:21.809Z",
+      "type": "clean",
+      "details": "整理了生活环境",
+      "expGained": 12
+    },
+    {
+      "id": "action-1774666521172",
+      "timestamp": "2026-03-28T02:55:21.172Z",
+      "type": "clean",
+      "details": "彻底清理了池塘",
+      "expGained": 12
+    },
+    {
+      "id": "action-1774666520969",
+      "timestamp": "2026-03-28T02:55:20.969Z",
+      "type": "clean",
+      "details": "更换了新鲜的水质",
+      "expGained": 12
+    },
+    {
+      "id": "action-1774666520816",
+      "timestamp": "2026-03-28T02:55:20.816Z",
+      "type": "clean",
+      "details": "更换了新鲜的水质",
+      "expGained": 12
+    },
+    {
+      "id": "action-1774666520659",
+      "timestamp": "2026-03-28T02:55:20.659Z",
+      "type": "clean",
+      "details": "整理了生活环境",
+      "expGained": 12
+    },
+    {
+      "id": "action-1774666520498",
+      "timestamp": "2026-03-28T02:55:20.498Z",
+      "type": "clean",
+      "details": "更换了新鲜的水质",
+      "expGained": 12
+    },
+    {
+      "id": "action-1774666519855",
+      "timestamp": "2026-03-28T02:55:19.855Z",
+      "type": "clean",
+      "details": "更换了新鲜的水质",
+      "expGained": 12
+    },
+    {
+      "id": "action-1774666518826",
+      "timestamp": "2026-03-28T02:55:18.826Z",
+      "type": "clean",
+      "details": "更换了新鲜的水质",
+      "expGained": 12
+    }
+  ],
+  "resources": {
+    "food": 100,
+    "medicine": 10,
+    "toys": 5,
+    "tokens": 1000
+  }
+}

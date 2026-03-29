@@ -17,6 +17,31 @@ import { ensureHealthTimelineLog, getHealthTrend } from './services/healthTimeli
 import { getVisualizationSnapshot } from './services/visualization';
 import { getAchievementStore, getAchievementUnlockHistory } from './services/achievementStore';
 import { computeLobsterState } from './services/lobsterStateEngine';
+import { getGameDashboardSnapshot, clearDashboardCache } from './services/gameDashboard';
+import { 
+  getLearningState, 
+  recordLearning, 
+  getTodayLearningSummary, 
+  checkLearningMilestones,
+  simulateMemoryRead,
+  simulateMemoryWrite,
+  simulateMemoryExplore,
+  type LearningActionType 
+} from './services/learningPoints';
+import {
+  getLobsterAgents,
+  getPondStats,
+  feedLobster,
+  trainLobster,
+  restLobster,
+} from './services/lobsterAgents';
+import {
+  getCaretakerState,
+  recordCaretakerAction,
+  getCaretakerLevelInfo,
+  getCaretakerSummary,
+  consumeResource,
+} from './services/caretaker';
 
 const app = new Hono();
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -44,12 +69,15 @@ const skillsCache = createTtlCache<Awaited<ReturnType<typeof getCompleteLobsterS
 const newsCache = createTtlCache<Awaited<ReturnType<typeof getOpenClawNews>>>(NEWS_CACHE_TTL_MS);
 const milestonesCache = createTtlCache<Awaited<ReturnType<typeof getMilestones>>>(MILESTONES_CACHE_TTL_MS);
 const careMessageCache = createTtlCache<{ message: string | null }>(CARE_CACHE_TTL_MS);
+const DASHBOARD_CACHE_TTL_MS = 30 * 1000;
+const dashboardCache = createTtlCache<Awaited<ReturnType<typeof getGameDashboardSnapshot>>>(DASHBOARD_CACHE_TTL_MS);
 
 function clearDynamicCaches() {
   statsCache.clear();
   achievementsCache.clear();
   milestonesCache.clear();
   careMessageCache.clear();
+  dashboardCache.clear();
 }
 
 app.use('*', cors());
@@ -234,6 +262,16 @@ app.get('/lobster/achievements', async (c) => {
   return c.json({ code: 0, data: achievements });
 });
 
+app.get('/lobster/achievement-unlock-history', async (c) => {
+  try {
+    const history = await getAchievementUnlockHistory();
+    return c.json({ code: 0, data: history });
+  } catch (err) {
+    console.error('[achievement-unlock-history]', err);
+    return c.json({ code: 0, data: [] });
+  }
+});
+
 app.get('/lobster/milestones', async (c) => {
   const milestones = await milestonesCache.get(async () => {
     const [stats, lobsterState] = await Promise.all([getCompleteLobsterStats(), loadLobsterState()]);
@@ -398,6 +436,323 @@ app.get('/lobster/visualization', async (c) => {
   } catch (error) {
     console.error('[visualization] error:', error);
     return c.json({ code: 1, message: '获取可视化数据失败' }, 500);
+  }
+});
+
+// ============================================
+// OCC 游戏化仪表盘 API
+// ============================================
+
+/** 获取完整游戏仪表盘数据 */
+app.get('/lobster/dashboard', async (c) => {
+  try {
+    const data = await dashboardCache.get(() => getGameDashboardSnapshot());
+    return c.json({ code: 0, data });
+  } catch (error) {
+    console.error('[dashboard] error:', error);
+    return c.json({ code: 1, message: '获取仪表盘数据失败' }, 500);
+  }
+});
+
+/** 获取健康仪表盘 */
+app.get('/lobster/dashboard/health', async (c) => {
+  try {
+    const { getHealthMetrics } = await import('./services/gameDashboard');
+    const data = await getHealthMetrics();
+    return c.json({ code: 0, data });
+  } catch (error) {
+    console.error('[dashboard/health] error:', error);
+    return c.json({ code: 1, message: '获取健康数据失败' }, 500);
+  }
+});
+
+/** 获取能量核心数据 */
+app.get('/lobster/dashboard/energy', async (c) => {
+  try {
+    const { getEnergyMetrics } = await import('./services/gameDashboard');
+    const data = await getEnergyMetrics();
+    return c.json({ code: 0, data });
+  } catch (error) {
+    console.error('[dashboard/energy] error:', error);
+    return c.json({ code: 1, message: '获取能量数据失败' }, 500);
+  }
+});
+
+/** 获取养殖师团队 */
+app.get('/lobster/dashboard/staff', async (c) => {
+  try {
+    const { getStaffMetrics } = await import('./services/gameDashboard');
+    const data = await getStaffMetrics();
+    return c.json({ code: 0, data });
+  } catch (error) {
+    console.error('[dashboard/staff] error:', error);
+    return c.json({ code: 1, message: '获取团队数据失败' }, 500);
+  }
+});
+
+/** 获取进化树 */
+app.get('/lobster/dashboard/evolution', async (c) => {
+  try {
+    const { getEvolutionMetrics } = await import('./services/gameDashboard');
+    const data = await getEvolutionMetrics();
+    return c.json({ code: 0, data });
+  } catch (error) {
+    console.error('[dashboard/evolution] error:', error);
+    return c.json({ code: 1, message: '获取进化树失败' }, 500);
+  }
+});
+
+/** 获取记忆宫殿 */
+app.get('/lobster/dashboard/memory', async (c) => {
+  try {
+    const { getMemoryMetrics } = await import('./services/gameDashboard');
+    const data = await getMemoryMetrics();
+    return c.json({ code: 0, data });
+  } catch (error) {
+    console.error('[dashboard/memory] error:', error);
+    return c.json({ code: 1, message: '获取记忆数据失败' }, 500);
+  }
+});
+
+/** 获取养殖手册 */
+app.get('/lobster/dashboard/handbook', async (c) => {
+  try {
+    const { getHandbookMetrics } = await import('./services/gameDashboard');
+    const data = await getHandbookMetrics();
+    return c.json({ code: 0, data });
+  } catch (error) {
+    console.error('[dashboard/handbook] error:', error);
+    return c.json({ code: 1, message: '获取手册数据失败' }, 500);
+  }
+});
+
+/** 获取任务板 */
+app.get('/lobster/dashboard/tasks', async (c) => {
+  try {
+    const { getTaskMetrics } = await import('./services/gameDashboard');
+    const data = await getTaskMetrics();
+    return c.json({ code: 0, data });
+  } catch (error) {
+    console.error('[dashboard/tasks] error:', error);
+    return c.json({ code: 1, message: '获取任务数据失败' }, 500);
+  }
+});
+
+/** 获取设施状态 */
+app.get('/lobster/dashboard/facility', async (c) => {
+  try {
+    const { getFacilityMetrics } = await import('./services/gameDashboard');
+    const data = await getFacilityMetrics();
+    return c.json({ code: 0, data });
+  } catch (error) {
+    console.error('[dashboard/facility] error:', error);
+    return c.json({ code: 1, message: '获取设施数据失败' }, 500);
+  }
+});
+
+// ============================================
+// 学习点数系统 API
+// ============================================
+
+/** 获取学习状态 */
+app.get('/lobster/learning', async (c) => {
+  try {
+    const data = await getLearningState();
+    return c.json({ code: 0, data });
+  } catch (error) {
+    console.error('[learning] error:', error);
+    return c.json({ code: 1, message: '获取学习状态失败' }, 500);
+  }
+});
+
+/** 获取今日学习摘要 */
+app.get('/lobster/learning/today', async (c) => {
+  try {
+    const data = await getTodayLearningSummary();
+    return c.json({ code: 0, data });
+  } catch (error) {
+    console.error('[learning/today] error:', error);
+    return c.json({ code: 1, message: '获取今日学习摘要失败' }, 500);
+  }
+});
+
+/** 获取学习里程碑 */
+app.get('/lobster/learning/milestones', async (c) => {
+  try {
+    const data = await checkLearningMilestones();
+    return c.json({ code: 0, data });
+  } catch (error) {
+    console.error('[learning/milestones] error:', error);
+    return c.json({ code: 1, message: '获取学习里程碑失败' }, 500);
+  }
+});
+
+/** 记录学习行为 */
+app.post('/lobster/learning/record', async (c) => {
+  try {
+    const { action, metadata } = await c.req.json().catch(() => ({ action: '', metadata: {} }));
+    
+    const validActions: LearningActionType[] = [
+      'memory_read', 'memory_write', 'memory_explore', 'skill_learn', 'task_complete'
+    ];
+    
+    if (!validActions.includes(action)) {
+      return c.json({ code: 1, message: '无效的学习行为类型' }, 400);
+    }
+    
+    const record = await recordLearning(action as LearningActionType, metadata);
+    return c.json({ code: 0, data: record });
+  } catch (error) {
+    console.error('[learning/record] error:', error);
+    return c.json({ code: 1, message: '记录学习行为失败' }, 500);
+  }
+});
+
+/** 模拟记忆读取（获得学习点） */
+app.post('/lobster/learning/memory-read', async (c) => {
+  try {
+    const { memoryFile } = await c.req.json().catch(() => ({ memoryFile: 'unknown' }));
+    const record = await simulateMemoryRead(memoryFile);
+    return c.json({ code: 0, data: record });
+  } catch (error) {
+    console.error('[learning/memory-read] error:', error);
+    return c.json({ code: 1, message: '记录记忆读取失败' }, 500);
+  }
+});
+
+/** 模拟记忆探索（获得学习点） */
+app.post('/lobster/learning/memory-explore', async (c) => {
+  try {
+    const { query } = await c.req.json().catch(() => ({ query: '' }));
+    if (!query) {
+      return c.json({ code: 1, message: '请提供探索关键词' }, 400);
+    }
+    const record = await simulateMemoryExplore(query);
+    return c.json({ code: 0, data: record });
+  } catch (error) {
+    console.error('[learning/memory-explore] error:', error);
+    return c.json({ code: 1, message: '记录记忆探索失败' }, 500);
+  }
+});
+
+// ============================================
+// 小龙虾群系统 API
+// ============================================
+
+/** 获取所有小龙虾 */
+app.get('/lobster/pond', async (c) => {
+  try {
+    const data = await getLobsterAgents();
+    return c.json({ code: 0, data });
+  } catch (error) {
+    console.error('[pond] error:', error);
+    return c.json({ code: 1, message: '获取龙虾群失败' }, 500);
+  }
+});
+
+/** 获取池塘统计 */
+app.get('/lobster/pond/stats', async (c) => {
+  try {
+    const data = await getPondStats();
+    return c.json({ code: 0, data });
+  } catch (error) {
+    console.error('[pond/stats] error:', error);
+    return c.json({ code: 1, message: '获取池塘统计失败' }, 500);
+  }
+});
+
+/** 喂食小龙虾 */
+app.post('/lobster/pond/:id/feed', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const result = await feedLobster(id);
+    return c.json({ code: 0, data: result });
+  } catch (error) {
+    console.error('[pond/feed] error:', error);
+    return c.json({ code: 1, message: '喂食失败' }, 500);
+  }
+});
+
+/** 训练小龙虾 */
+app.post('/lobster/pond/:id/train', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const result = await trainLobster(id);
+    return c.json({ code: 0, data: result });
+  } catch (error) {
+    console.error('[pond/train] error:', error);
+    return c.json({ code: 1, message: '训练失败' }, 500);
+  }
+});
+
+/** 让小龙虾休息 */
+app.post('/lobster/pond/:id/rest', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const result = await restLobster(id);
+    return c.json({ code: 0, data: result });
+  } catch (error) {
+    console.error('[pond/rest] error:', error);
+    return c.json({ code: 1, message: '休息失败' }, 500);
+  }
+});
+
+// ============================================
+// 养殖师系统 API
+// ============================================
+
+/** 获取养殖师状态 */
+app.get('/lobster/caretaker', async (c) => {
+  try {
+    const data = await getCaretakerState();
+    return c.json({ code: 0, data });
+  } catch (error) {
+    console.error('[caretaker] error:', error);
+    return c.json({ code: 1, message: '获取养殖师状态失败' }, 500);
+  }
+});
+
+/** 获取养殖师摘要 */
+app.get('/lobster/caretaker/summary', async (c) => {
+  try {
+    const data = await getCaretakerSummary();
+    return c.json({ code: 0, data });
+  } catch (error) {
+    console.error('[caretaker/summary] error:', error);
+    return c.json({ code: 1, message: '获取养殖师摘要失败' }, 500);
+  }
+});
+
+/** 获取养殖师等级信息 */
+app.get('/lobster/caretaker/level', async (c) => {
+  try {
+    const data = await getCaretakerLevelInfo();
+    return c.json({ code: 0, data });
+  } catch (error) {
+    console.error('[caretaker/level] error:', error);
+    return c.json({ code: 1, message: '获取等级信息失败' }, 500);
+  }
+});
+
+/** 记录养殖师行为 */
+app.post('/lobster/caretaker/action', async (c) => {
+  try {
+    const { type, targetLobsterId, details } = await c.req.json().catch(() => ({ 
+      type: '', 
+      targetLobsterId: undefined, 
+      details: '' 
+    }));
+    
+    const validTypes = ['feed', 'train', 'rest', 'clean', 'observe', 'evolve'];
+    if (!validTypes.includes(type)) {
+      return c.json({ code: 1, message: '无效的行为类型' }, 400);
+    }
+    
+    const result = await recordCaretakerAction(type as any, targetLobsterId, details);
+    return c.json({ code: 0, data: result });
+  } catch (error) {
+    console.error('[caretaker/action] error:', error);
+    return c.json({ code: 1, message: '记录行为失败' }, 500);
   }
 });
 
