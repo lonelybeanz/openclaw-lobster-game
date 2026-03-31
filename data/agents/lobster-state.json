@@ -1,0 +1,52 @@
+{
+  "agentId": "lobster",
+  "name": "小弟虾-lobster",
+  "role": "other",
+  "personality": "curious",
+  "emoji": "🦐",
+  "color": "#FFD93D",
+  "status": {
+    "hp": 80,
+    "hunger": 30.686116666666663,
+    "mood": 70.85764583333334,
+    "energy": 60.85764583333334,
+    "fatigue": 19.656941666666665,
+    "growth": 0,
+    "level": 1
+  },
+  "stats": {
+    "intelligence": 20,
+    "coding": 10,
+    "planning": 10,
+    "stability": 10,
+    "creativity": 10,
+    "learning": 15,
+    "neurons": 0
+  },
+  "evolution": {
+    "stage": "larva",
+    "progress": 0
+  },
+  "timestamps": {
+    "created": "2026-03-31T08:50:04.020Z",
+    "lastUpdate": "2026-03-31T09:00:21.525Z",
+    "lastFed": "2026-03-31T08:50:04.020Z",
+    "lastTrained": "2026-03-31T08:50:04.020Z",
+    "lastRested": "2026-03-31T08:50:04.020Z",
+    "lastActive": "2026-03-31T08:50:04.020Z"
+  },
+  "openclaw": {
+    "totalTokens": 0,
+    "totalSessions": 0,
+    "memoryFiles": 0
+  },
+  "totals": {
+    "interactions": 0,
+    "tokensConsumed": 0,
+    "sessionsCompleted": 0
+  },
+  "currentAction": {
+    "action": "准备就绪",
+    "since": "2026-03-31T08:58:11.122Z"
+  }
+}

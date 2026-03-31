@@ -1,510 +1,572 @@
 /**
- * 小龙虾群系统 (Lobster Agents System)
+ * Lobster Agents Service
  * 
- * 核心理念：
- * - 每个 OpenClaw Agent 对应一只小龙虾
- * - 小龙虾有自己的属性、成长、记忆、状态
- * - 人类用户是养殖师，负责照顾所有龙虾
- * 
- * 对应关系：
- * - main → 主虾 (最老练的龙虾)
- * - dev → 开发虾 (代码高手)
- * - pm → 产品虾 (规划大师)
- * - ops → 运维虾 (稳定守护)
- * - research → 研究虾 (探索者)
+ * 管理小龙虾群的核心服务
+ * 现在使用 agentLobsterState.ts 进行状态持久化
  */
 
-import { readFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { homedir } from 'node:os';
-import { exec } from 'node:child_process';
-import { promisify } from 'node:util';
+import { join } from 'path';
+import { existsSync } from 'fs';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import {
+  AgentLobsterState,
+  loadAgentState,
+  loadAllAgentStates,
+  interactWithAgent,
+  getAgentsSummary,
+  LobsterRole,
+  LobsterPersonality,
+  EvolutionStage,
+} from './agentLobsterState';
 
 const execAsync = promisify(exec);
-const OPENCLAW_DIR = process.env.OPENCLAW_DIR || join(homedir(), '.openclaw');
+const OPENCLAW_DIR = process.env.OPENCLAW_DIR || '/Users/moltbot/.openclaw';
 
-// 小龙虾角色定义
-export type LobsterRole = 
-  | 'main'      // 主虾 - 默认Agent
-  | 'dev'       // 开发虾 - 写代码
-  | 'pm'        // 产品虾 - 做规划
-  | 'ops'       // 运维虾 - 保稳定
-  | 'research'  // 研究虾 - 探新路
-  | 'design'    // 设计虾 - 画界面
-  | 'test'      // 测试虾 - 找Bug
-  | 'other';    // 其他虾
+// 重新导出类型，保持向后兼容
+export type { AgentLobsterState as LobsterAgent, LobsterRole, LobsterPersonality, EvolutionStage };
 
-// 小龙虾性格
-export type LobsterPersonality = 
-  | 'diligent'   // 勤奋
-  | 'lazy'       // 懒散
-  | 'curious'    // 好奇
-  | 'cautious'   // 谨慎
-  | 'adventurous' // 冒险
-  | 'social';    // 社交
-
-// 小龙虾状态
-export interface LobsterStatus {
-  hp: number;           // 体力 0-100
-  hunger: number;       // 饥饿度 0-100 (越高越饿)
-  mood: number;         // 心情 0-100
-  energy: number;       // 能量 0-100
-  growth: number;       // 成长值
-  level: number;        // 等级
-}
-
-// 小龙虾属性 (基于Agent实际数据)
-export interface LobsterStats {
-  intelligence: number;  // 智力 (基于token使用量)
-  coding: number;        // 编程能力 (dev虾)
-  planning: number;      // 规划能力 (pm虾)
-  stability: number;     // 稳定性 (ops虾)
-  creativity: number;    // 创造力
-  learning: number;      // 学习能力
-}
-
-// 小龙虾个体
-export interface LobsterAgent {
-  id: string;                    // Agent ID
-  name: string;                  // 显示名称
-  role: LobsterRole;            // 角色
-  emoji: string;                // 表情符号
-  personality: LobsterPersonality; // 性格
-  color: string;                // 主题色
-  
-  // 状态
-  status: LobsterStatus;
-  
-  // 属性
-  stats: LobsterStats;
-  
-  // 成长
-  birthDate: string;            // 创建日期
-  age: number;                  // 年龄(天)
-  evolutionStage: number;       // 进化阶段 1-5
-  
-  // 工作数据
-  workspaceRoot: string;        // 工作目录
-  totalSessions: number;        // 总会话数
-  totalTokens: number;          // 总token消耗
-  lastActive: string;           // 最后活跃
-  
-  // 记忆
-  memoryFiles: number;          // 记忆文件数
-  memoryQuality: number;        // 记忆质量
-  
-  // 行为
-  currentAction: string;        // 当前行为
-  actionSince: string;          // 开始时间
-}
-
-// 角色配置
-const ROLE_CONFIG: Record<LobsterRole, { 
-  emoji: string; 
-  name: string; 
+// 前端兼容的数据格式
+export interface FrontendLobsterAgent {
+  id: string;
+  name: string;
+  role: LobsterRole;
+  emoji: string;
+  personality: LobsterPersonality;
   color: string;
-  description: string;
-  primaryStat: keyof LobsterStats;
-}> = {
+  status: {
+    hp: number;
+    hunger: number;
+    mood: number;
+    energy: number;
+    growth: number;
+    level: number;
+  };
+  stats: {
+    intelligence: number;
+    coding: number;
+    planning: number;
+    stability: number;
+    creativity: number;
+    learning: number;
+  };
+  birthDate: string;
+  age: number;
+  evolutionStage: number;
+  workspaceRoot: string;
+  totalSessions: number;
+  totalTokens: number;
+  lastActive: string;
+  memoryFiles: number;
+  memoryQuality: number;
+  currentAction: string;
+  actionSince: string;
+}
+
+// 转换新状态为前端格式
+function toFrontendFormat(state: AgentLobsterState): FrontendLobsterAgent {
+  const stageNumber: Record<EvolutionStage, number> = {
+    larva: 1,
+    juvenile: 2,
+    adult: 3,
+    master: 4,
+    legendary: 5,
+  };
+  
+  const daysSince = (date: string) => 
+    Math.floor((Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24));
+  
+  return {
+    id: state.agentId,
+    name: state.name,
+    role: state.role,
+    emoji: state.emoji,
+    personality: state.personality,
+    color: state.color,
+    status: {
+      hp: Math.round(state.status.hp),
+      hunger: Math.round(state.status.hunger),
+      mood: Math.round(state.status.mood),
+      energy: Math.round(state.status.energy),
+      growth: Math.round(state.status.growth),
+      level: state.status.level,
+    },
+    stats: {
+      intelligence: state.stats.intelligence,
+      coding: state.stats.coding,
+      planning: state.stats.planning,
+      stability: state.stats.stability,
+      creativity: state.stats.creativity,
+      learning: state.stats.learning,
+    },
+    fatigue: Math.round(state.status.fatigue),
+    birthDate: state.timestamps.created,
+    age: daysSince(state.timestamps.created),
+    evolutionStage: stageNumber[state.evolution.stage],
+    workspaceRoot: `/Users/moltbot/.openclaw/agents/${state.agentId}`,
+    totalSessions: state.openclaw.totalSessions,
+    totalTokens: state.openclaw.totalTokens,
+    lastActive: state.timestamps.lastActive,
+    memoryFiles: state.openclaw.memoryFiles,
+    memoryQuality: Math.round(state.status.mood * 0.8 + state.stats.intelligence * 0.2),
+    currentAction: state.currentAction?.action || '休息中',
+    actionSince: state.currentAction?.since || state.timestamps.lastActive,
+  };
+}
+
+// 角色配置（供外部使用）
+export const ROLE_CONFIG: Record<LobsterRole, { name: string; emoji: string; color: string; description: string }> = {
   main: {
-    emoji: '🦞',
     name: '主虾',
-    color: '#ef4444',
-    description: '最老练的龙虾，全能型选手',
-    primaryStat: 'intelligence',
+    emoji: '🦞',
+    color: '#FF6B6B',
+    description: '统筹全局的核心龙虾',
   },
   dev: {
-    emoji: '🦐',
     name: '开发虾',
-    color: '#3b82f6',
-    description: '代码高手，技术担当',
-    primaryStat: 'coding',
+    emoji: '👨‍💻',
+    color: '#4ECDC4',
+    description: '专注代码实现',
   },
   pm: {
-    emoji: '🦀',
     name: '产品虾',
-    color: '#f59e0b',
-    description: '规划大师，统筹全局',
-    primaryStat: 'planning',
+    emoji: '📊',
+    color: '#FFE66D',
+    description: '负责需求规划',
   },
   ops: {
-    emoji: '🐙',
     name: '运维虾',
-    color: '#10b981',
-    description: '稳定守护，任劳任怨',
-    primaryStat: 'stability',
+    emoji: '🔧',
+    color: '#95E1D3',
+    description: '保障系统稳定',
   },
   research: {
-    emoji: '🦑',
     name: '研究虾',
-    color: '#8b5cf6',
-    description: '探索者，追求创新',
-    primaryStat: 'creativity',
+    emoji: '🔬',
+    color: '#C7CEEA',
+    description: '探索前沿技术',
   },
   design: {
-    emoji: '🐚',
     name: '设计虾',
-    color: '#ec4899',
-    description: '美学大师，视觉担当',
-    primaryStat: 'creativity',
+    emoji: '🎨',
+    color: '#F8A5C2',
+    description: '负责用户体验',
   },
   test: {
-    emoji: '🦞',
     name: '测试虾',
-    color: '#f97316',
-    description: '找Bug专家，质量守护',
-    primaryStat: 'stability',
+    emoji: '🧪',
+    color: '#B8B8D1',
+    description: '保证质量',
   },
   other: {
+    name: '小弟虾',
     emoji: '🦐',
-    name: '小虾',
-    color: '#6b7280',
-    description: '潜力股，等待发光',
-    primaryStat: 'learning',
+    color: '#FFD93D',
+    description: '辅助支持',
   },
 };
 
 // 性格配置
-const PERSONALITY_CONFIG: Record<LobsterPersonality, {
-  hungerRate: number;    // 饥饿消耗速度
-  moodBonus: number;     // 心情加成
-  growthRate: number;    // 成长速度
-  actionTypes: string[]; // 常见行为
+export const PERSONALITY_CONFIG: Record<LobsterPersonality, {
+  name: string;
+  description: string;
+  hungerRate: number;
+  moodBonus: number;
+  growthRate: number;
+  actionTypes: string[];
 }> = {
   diligent: {
+    name: '勤奋',
+    description: '工作努力，但容易疲劳',
     hungerRate: 1.2,
-    moodBonus: 0,
+    moodBonus: 5,
     growthRate: 1.3,
-    actionTypes: ['写代码', '查文档', '改Bug', '优化性能'],
+    actionTypes: ['编写代码', 'Review PR', '学习新技术', '优化性能'],
   },
   lazy: {
+    name: '慵懒',
+    description: '喜欢休息，但恢复力强',
     hungerRate: 0.8,
-    moodBonus: 5,
-    growthRate: 0.9,
-    actionTypes: ['休息中', '喝咖啡', '发呆', '摸鱼'],
+    moodBonus: 0,
+    growthRate: 0.8,
+    actionTypes: ['休息中', '浏览文档', '思考人生', '喝咖啡'],
   },
   curious: {
+    name: '好奇',
+    description: '喜欢探索新知识',
     hungerRate: 1.0,
     moodBonus: 10,
     growthRate: 1.1,
-    actionTypes: ['探索新技术', '读源码', '做实验', '查资料'],
+    actionTypes: ['探索新库', '阅读源码', '尝试新工具', '研究算法'],
   },
   cautious: {
-    hungerRate: 1.0,
-    moodBonus: 0,
+    name: '谨慎',
+    description: '稳扎稳打，风险厌恶',
+    hungerRate: 0.9,
+    moodBonus: 5,
     growthRate: 1.0,
-    actionTypes: ['写测试', 'Review代码', '查日志', '备份数据'],
+    actionTypes: ['写测试', '检查配置', '备份数据', '监控告警'],
   },
   adventurous: {
-    hungerRate: 1.3,
+    name: '冒险',
+    description: '勇于尝试，但容易出错',
+    hungerRate: 1.1,
     moodBonus: 15,
     growthRate: 1.2,
-    actionTypes: ['重构代码', '尝试新工具', '挑战难题', '突破边界'],
+    actionTypes: ['重构代码', '尝试新框架', '挑战难题', '实验性功能'],
   },
   social: {
+    name: '社交',
+    description: '善于协作沟通',
     hungerRate: 1.0,
     moodBonus: 10,
     growthRate: 1.0,
-    actionTypes: ['开会讨论', '协助同事', '写文档', '分享经验'],
+    actionTypes: ['团队会议', 'Code Review', '写文档', '技术分享'],
   },
 };
 
-// 根据Agent ID推断角色
-function inferRole(agentId: string): LobsterRole {
-  const id = agentId.toLowerCase();
-  if (id.includes('dev') || id.includes('code') || id.includes('eng')) return 'dev';
-  if (id.includes('pm') || id.includes('product') || id.includes('plan')) return 'pm';
-  if (id.includes('ops') || id.includes('sre') || id.includes('infra')) return 'ops';
-  if (id.includes('research') || id.includes('rd') || id.includes('lab')) return 'research';
-  if (id.includes('design') || id.includes('ui') || id.includes('ux')) return 'design';
-  if (id.includes('test') || id.includes('qa')) return 'test';
-  if (id.includes('main') || id.includes('default')) return 'main';
-  return 'other';
-}
+// 进化阶段配置
+export const EVOLUTION_STAGES: Record<EvolutionStage, {
+  name: string;
+  emoji: string;
+  description: string;
+  minGrowth: number;
+}> = {
+  larva: {
+    name: '幼虾',
+    emoji: '🦐',
+    description: '刚孵化的小龙虾，需要细心照料',
+    minGrowth: 0,
+  },
+  juvenile: {
+    name: '成长期',
+    emoji: '🦞',
+    description: '正在快速成长的龙虾',
+    minGrowth: 100,
+  },
+  adult: {
+    name: '成虾',
+    emoji: '🦀',
+    description: '已经成熟，可以独当一面',
+    minGrowth: 500,
+  },
+  master: {
+    name: '大师',
+    emoji: '🐙',
+    description: '经验丰富的龙虾大师',
+    minGrowth: 2000,
+  },
+  legendary: {
+    name: '传说',
+    emoji: '🐉',
+    description: '传说中的存在',
+    minGrowth: 5000,
+  },
+};
 
-// 根据角色和统计数据生成性格
-function generatePersonality(role: LobsterRole, sessions: number): LobsterPersonality {
-  const rand = Math.random();
-  
-  // 主虾通常是勤奋的
-  if (role === 'main') return 'diligent';
-  
-  // 开发虾有创造力
-  if (role === 'dev') return rand > 0.7 ? 'adventurous' : 'diligent';
-  
-  // 研究虾是好奇的
-  if (role === 'research') return 'curious';
-  
-  // 运维虾是谨慎的
-  if (role === 'ops') return 'cautious';
-  
-  // 产品虾是社交的
-  if (role === 'pm') return 'social';
-  
-  // 其他随机
-  if (rand < 0.1) return 'lazy';
-  if (rand < 0.4) return 'diligent';
-  if (rand < 0.6) return 'curious';
-  if (rand < 0.8) return 'cautious';
-  return 'adventurous';
-}
-
-// 计算龙虾状态
-function calculateStatus(
-  sessions: number,
-  tokens: number,
-  memoryFiles: number,
-  personality: LobsterPersonality
-): LobsterStatus {
-  const personalityConfig = PERSONALITY_CONFIG[personality];
-  
-  // 基础成长值
-  const growth = Math.floor(tokens / 1000 + sessions * 10);
-  const level = Math.floor(growth / 100) + 1;
-  
-  // 体力 (基于最近活跃度)
-  const hp = Math.min(100, Math.floor(80 + Math.random() * 20));
-  
-  // 饥饿度 (基于性格)
-  const hunger = Math.min(100, Math.floor(30 + Math.random() * 40 * personalityConfig.hungerRate));
-  
-  // 心情 (基于性格)
-  const mood = Math.min(100, Math.floor(60 + Math.random() * 30 + personalityConfig.moodBonus));
-  
-  // 能量
-  const energy = Math.min(100, Math.floor(50 + (tokens / 10000)));
-  
-  return {
-    hp,
-    hunger,
-    mood,
-    energy,
-    growth,
-    level,
-  };
-}
-
-// 计算龙虾属性
-function calculateStats(role: LobsterRole, tokens: number, sessions: number): LobsterStats {
-  const base = Math.floor(tokens / 10000 + sessions);
-  
-  const stats: LobsterStats = {
-    intelligence: Math.min(100, base + 20),
-    coding: Math.min(100, base + (role === 'dev' ? 30 : 0)),
-    planning: Math.min(100, base + (role === 'pm' ? 30 : 0)),
-    stability: Math.min(100, base + (role === 'ops' ? 30 : 0)),
-    creativity: Math.min(100, base + (role === 'research' || role === 'design' ? 25 : 0)),
-    learning: Math.min(100, base + 15),
-  };
-  
-  return stats;
-}
-
-// 生成当前行为
-function generateAction(personality: LobsterPersonality, role: LobsterRole): { action: string; since: string } {
-  const personalityConfig = PERSONALITY_CONFIG[personality];
-  const actions = personalityConfig.actionTypes;
-  
-  // 如果是其他角色，添加一些角色特定行为
-  if (role === 'dev') actions.push('写代码', 'Debug', 'Review PR');
-  if (role === 'pm') actions.push('写PRD', '开会', '排期');
-  if (role === 'ops') actions.push('监控告警', '部署', '扩容');
-  if (role === 'research') actions.push('读论文', '做实验', '写报告');
-  
-  const action = actions[Math.floor(Math.random() * actions.length)];
-  
-  // 随机一个开始时间（最近2小时内）
-  const since = new Date(Date.now() - Math.random() * 7200000).toISOString();
-  
-  return { action, since };
-}
-
-// 获取所有小龙虾
-export async function getLobsterAgents(): Promise<LobsterAgent[]> {
-  const lobsters: LobsterAgent[] = [];
-  
+/**
+ * 获取所有小龙虾（主入口）
+ * 现在使用持久化状态，每次调用都会：
+ * 1. 应用时间衰减（计算离线期间的变化）
+ * 2. 检测新的 OpenClaw 活动
+ * 3. 更新并保存状态
+ */
+export async function getLobsterAgents(): Promise<FrontendLobsterAgent[]> {
   try {
-    // 获取所有Agent目录
+    const agents = await loadAllAgentStates();
+    
+    // 如果没有agent，尝试从OpenClaw目录扫描
+    if (agents.length === 0) {
+      const scannedAgents = await scanOpenClawAgents();
+      if (scannedAgents.length === 0) {
+        // 返回默认主虾
+        return [toFrontendFormat(await loadAgentState('default'))];
+      }
+      return scannedAgents.map(toFrontendFormat);
+    }
+    
+    return agents.map(toFrontendFormat);
+  } catch (error) {
+    console.error('[lobsterAgents] 获取龙虾失败:', error);
+    return [toFrontendFormat(await loadAgentState('default'))];
+  }
+}
+
+/**
+ * 扫描 OpenClaw agents 目录
+ */
+async function scanOpenClawAgents(): Promise<AgentLobsterState[]> {
+  try {
     const agentsPath = join(OPENCLAW_DIR, 'agents');
     if (!existsSync(agentsPath)) {
-      // 如果没有agents目录，返回默认主虾
-      return [createDefaultMainLobster()];
+      return [];
     }
     
     const { stdout } = await execAsync(`ls -1 ${agentsPath} 2>/dev/null`);
     const agentDirs = stdout.trim().split('\n').filter(Boolean);
     
+    const agents: AgentLobsterState[] = [];
     for (const agentId of agentDirs) {
       try {
-        const lobster = await createLobsterFromAgent(agentId);
-        lobsters.push(lobster);
+        const state = await loadAgentState(agentId);
+        agents.push(state);
       } catch (e) {
-        console.error(`[lobsterAgents] 创建龙虾 ${agentId} 失败:`, e);
+        console.error(`[lobsterAgents] 扫描 ${agentId} 失败:`, e);
       }
     }
     
-    // 按等级排序
-    lobsters.sort((a, b) => b.status.level - a.status.level);
-    
-    return lobsters.length > 0 ? lobsters : [createDefaultMainLobster()];
+    return agents.sort((a, b) => b.status.level - a.status.level);
   } catch (error) {
-    console.error('[lobsterAgents] 获取龙虾失败:', error);
-    return [createDefaultMainLobster()];
+    console.error('[lobsterAgents] 扫描失败:', error);
+    return [];
   }
 }
 
-// 从Agent数据创建小龙虾
-async function createLobsterFromAgent(agentId: string): Promise<LobsterAgent> {
-  const role = inferRole(agentId);
-  const roleConfig = ROLE_CONFIG[role];
-  
-  // 尝试读取Agent的session数据
-  let sessions = 0;
-  let tokens = 0;
-  let memoryFiles = 0;
-  let birthDate = new Date().toISOString();
-  let lastActive = new Date().toISOString();
-  
+/**
+ * 获取单只龙虾
+ */
+export async function getLobsterAgent(agentId: string): Promise<FrontendLobsterAgent | null> {
   try {
-    const sessionsPath = join(OPENCLAW_DIR, 'agents', agentId, 'sessions', 'sessions.json');
-    if (existsSync(sessionsPath)) {
-      const content = await readFile(sessionsPath, 'utf-8');
-      const sessionData = JSON.parse(content);
-      sessions = sessionData.length || 0;
-      
-      if (sessions > 0) {
-        const lastSession = sessionData[sessionData.length - 1];
-        lastActive = lastSession.createdAt || lastActive;
-        
-        // 计算总token
-        tokens = sessionData.reduce((sum: number, s: any) => sum + (s.totalTokens || 0), 0);
-      }
-    }
-  } catch {
-    // 忽略错误，使用默认值
+    const state = await loadAgentState(agentId);
+    return toFrontendFormat(state);
+  } catch (error) {
+    console.error(`[lobsterAgents] 获取 ${agentId} 失败:`, error);
+    return null;
   }
-  
-  // 生成性格
-  const personality = generatePersonality(role, sessions);
-  
-  // 计算状态和属性
-  const status = calculateStatus(sessions, tokens, memoryFiles, personality);
-  const stats = calculateStats(role, tokens, sessions);
-  
-  // 生成当前行为
-  const { action, since } = generateAction(personality, role);
-  
-  // 计算年龄
-  const age = Math.floor((Date.now() - new Date(birthDate).getTime()) / (1000 * 60 * 60 * 24));
-  
-  return {
-    id: agentId,
-    name: roleConfig.name,
-    role,
-    emoji: roleConfig.emoji,
-    personality,
-    color: roleConfig.color,
-    status,
-    stats,
-    birthDate,
-    age: Math.max(1, age),
-    evolutionStage: Math.min(5, Math.floor(status.level / 5) + 1),
-    workspaceRoot: join(OPENCLAW_DIR, 'agents', agentId),
-    totalSessions: sessions,
-    totalTokens: tokens,
-    lastActive,
-    memoryFiles,
-    memoryQuality: Math.floor(Math.random() * 40) + 60,
-    currentAction: action,
-    actionSince: since,
-  };
 }
 
-// 创建默认主虾
-function createDefaultMainLobster(): LobsterAgent {
-  const roleConfig = ROLE_CONFIG['main'];
-  return {
-    id: 'main',
-    name: '主虾',
-    role: 'main',
-    emoji: roleConfig.emoji,
-    personality: 'diligent',
-    color: roleConfig.color,
-    status: {
-      hp: 100,
-      hunger: 30,
-      mood: 85,
-      energy: 80,
-      growth: 1560,
-      level: 16,
-    },
-    stats: {
-      intelligence: 75,
-      coding: 70,
-      planning: 65,
-      stability: 80,
-      creativity: 70,
-      learning: 75,
-    },
-    birthDate: new Date().toISOString(),
-    age: 24,
-    evolutionStage: 4,
-    workspaceRoot: join(OPENCLAW_DIR, 'workspace'),
-    totalSessions: 60,
-    totalTokens: 156000,
-    lastActive: new Date().toISOString(),
-    memoryFiles: 21,
-    memoryQuality: 96,
-    currentAction: '统筹全局',
-    actionSince: new Date().toISOString(),
-  };
+/**
+ * 与龙虾互动
+ */
+export async function interactWithLobster(
+  agentId: string,
+  action: 'feed' | 'train' | 'rest'
+): Promise<{ success: boolean; state?: FrontendLobsterAgent; message: string; expGained: number }> {
+  try {
+    const result = await interactWithAgent(agentId, action);
+    return {
+      success: true,
+      state: toFrontendFormat(result.state),
+      message: result.message,
+      expGained: result.expGained,
+    };
+  } catch (error) {
+    console.error(`[lobsterAgents] 互动失败:`, error);
+    return {
+      success: false,
+      message: '互动失败，请重试',
+      expGained: 0,
+    };
+  }
 }
 
-// 获取龙虾池塘统计
-export async function getPondStats(): Promise<{
-  totalLobsters: number;
-  averageLevel: number;
+/**
+ * 获取龙虾群统计
+ */
+export async function getLobsterStats(): Promise<{
+  total: number;
+  avgLevel: number;
   totalTokens: number;
   totalSessions: number;
-  averageMood: number;
-  needsFeeding: number;  // 需要喂食的龙虾数
-  needsRest: number;     // 需要休息的龙虾数
+  activeToday: number;
+  needsAttention: number;
+  evolutionDistribution: Record<EvolutionStage, number>;
+  roleDistribution: Record<LobsterRole, number>;
 }> {
-  const lobsters = await getLobsterAgents();
+  const agents = await getLobsterAgents();
+  const summary = await getAgentsSummary();
+  
+  const evolutionDistribution: Record<EvolutionStage, number> = {
+    larva: 0,
+    juvenile: 0,
+    adult: 0,
+    master: 0,
+    legendary: 0,
+  };
+  
+  const roleDistribution: Record<LobsterRole, number> = {
+    main: 0,
+    dev: 0,
+    pm: 0,
+    ops: 0,
+    research: 0,
+    design: 0,
+    test: 0,
+    other: 0,
+  };
+  
+  let totalTokens = 0;
+  let totalSessions = 0;
+  
+  for (const agent of agents) {
+    evolutionDistribution[agent.evolution.stage]++;
+    roleDistribution[agent.role]++;
+    totalTokens += agent.openclaw.totalTokens;
+    totalSessions += agent.openclaw.totalSessions;
+  }
   
   return {
-    totalLobsters: lobsters.length,
-    averageLevel: lobsters.reduce((sum, l) => sum + l.status.level, 0) / lobsters.length,
-    totalTokens: lobsters.reduce((sum, l) => sum + l.totalTokens, 0),
-    totalSessions: lobsters.reduce((sum, l) => sum + l.totalSessions, 0),
-    averageMood: lobsters.reduce((sum, l) => sum + l.status.mood, 0) / lobsters.length,
-    needsFeeding: lobsters.filter(l => l.status.hunger > 60).length,
-    needsRest: lobsters.filter(l => l.status.energy < 30).length,
+    total: agents.length,
+    avgLevel: summary.avgLevel,
+    totalTokens,
+    totalSessions,
+    activeToday: summary.activeToday,
+    needsAttention: summary.needsAttention.length,
+    evolutionDistribution,
+    roleDistribution,
   };
 }
 
-// 喂食小龙虾
-export async function feedLobster(agentId: string): Promise<{ success: boolean; message: string }> {
-  // 这里应该实际修改龙虾状态
+/**
+ * 获取活跃龙虾（最近24小时有活动）
+ */
+export async function getActiveLobsters(hours: number = 24): Promise<FrontendLobsterAgent[]> {
+  const agents = await loadAllAgentStates();
+  const now = Date.now();
+  const threshold = hours * 60 * 60 * 1000;
+  
+  return agents
+    .filter(agent => {
+      const lastActive = new Date(agent.timestamps.lastActive).getTime();
+      return (now - lastActive) < threshold;
+    })
+    .map(toFrontendFormat);
+}
+
+/**
+ * 获取需要关注的龙虾（饥饿/疲劳/心情低落）
+ */
+export async function getNeedyLobsters(): Promise<FrontendLobsterAgent[]> {
+  const agents = await loadAllAgentStates();
+  
+  return agents
+    .filter(agent => {
+      return agent.status.hunger > 70 ||
+             agent.status.fatigue > 80 ||
+             agent.status.mood < 30 ||
+             agent.status.hp < 30;
+    })
+    .map(toFrontendFormat);
+}
+
+/**
+ * 获取进化排行榜
+ */
+export async function getEvolutionLeaderboard(limit: number = 10): Promise<FrontendLobsterAgent[]> {
+  const agents = await loadAllAgentStates();
+  
+  return agents
+    .sort((a, b) => {
+      // 先按进化阶段排序
+      const stageOrder = ['legendary', 'master', 'adult', 'juvenile', 'larva'];
+      const stageDiff = stageOrder.indexOf(a.evolution.stage) - stageOrder.indexOf(b.evolution.stage);
+      if (stageDiff !== 0) return stageDiff;
+      
+      // 同阶段按成长值排序
+      return b.status.growth - a.status.growth;
+    })
+    .slice(0, limit)
+    .map(toFrontendFormat);
+}
+
+/**
+ * 格式化年龄显示
+ */
+export function formatAge(createdDate: string): string {
+  const days = Math.floor((Date.now() - new Date(createdDate).getTime()) / (1000 * 60 * 60 * 24));
+  if (days < 1) return '今天刚出生';
+  if (days === 1) return '1 天';
+  if (days < 30) return `${days} 天`;
+  if (days < 365) return `${Math.floor(days / 30)} 个月`;
+  return `${Math.floor(days / 365)} 年`;
+}
+
+/**
+ * 格式化最后活跃时间
+ */
+export function formatLastActive(lastActiveDate: string): string {
+  const diff = Date.now() - new Date(lastActiveDate).getTime();
+  const minutes = Math.floor(diff / (1000 * 60));
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  
+  if (minutes < 1) return '刚刚';
+  if (minutes < 60) return `${minutes} 分钟前`;
+  if (hours < 24) return `${hours} 小时前`;
+  if (days === 1) return '昨天';
+  return `${days} 天前`;
+}
+
+/**
+ * 获取状态颜色
+ */
+export function getStatusColor(value: number): string {
+  if (value >= 80) return '#4CAF50'; // 绿色
+  if (value >= 50) return '#FFC107'; // 黄色
+  if (value >= 30) return '#FF9800'; // 橙色
+  return '#F44336'; // 红色
+}
+
+/**
+ * 获取状态描述
+ */
+export function getStatusDescription(value: number): string {
+  if (value >= 80) return '优秀';
+  if (value >= 50) return '良好';
+  if (value >= 30) return '一般';
+  return '危险';
+}
+
+// ============================================
+// 兼容层 - 为 app.ts 提供旧版 API
+// ============================================
+
+/** 兼容：获取池塘统计 */
+export async function getPondStats(): Promise<{
+  totalLobsters: number;
+  totalTokens: number;
+  totalSessions: number;
+  avgLevel: number;
+  activeToday: number;
+  needsAttention: number;
+}> {
+  const stats = await getLobsterStats();
   return {
-    success: true,
-    message: `🍖 成功喂食 ${agentId}！饥饿度降低，体力恢复。`,
+    totalLobsters: stats.total,
+    totalTokens: stats.totalTokens,
+    totalSessions: stats.totalSessions,
+    avgLevel: stats.avgLevel,
+    activeToday: stats.activeToday,
+    needsAttention: stats.needsAttention,
   };
 }
 
-// 训练小龙虾
-export async function trainLobster(agentId: string): Promise<{ success: boolean; message: string }> {
-  return {
-    success: true,
-    message: `💪 ${agentId} 完成训练！属性提升，成长值增加。`,
-  };
+/** 兼容：喂食 */
+export async function feedLobster(agentId: string): Promise<{
+  success: boolean;
+  lobster?: FrontendLobsterAgent;
+  message: string;
+  expGained: number;
+}> {
+  return interactWithLobster(agentId, 'feed');
 }
 
-// 让小龙虾休息
-export async function restLobster(agentId: string): Promise<{ success: boolean; message: string }> {
-  return {
-    success: true,
-    message: `😴 ${agentId} 休息中... 能量恢复，心情变好。`,
-  };
+/** 兼容：训练 */
+export async function trainLobster(agentId: string): Promise<{
+  success: boolean;
+  lobster?: FrontendLobsterAgent;
+  message: string;
+  expGained: number;
+}> {
+  return interactWithLobster(agentId, 'train');
+}
+
+/** 兼容：休息 */
+export async function restLobster(agentId: string): Promise<{
+  success: boolean;
+  lobster?: FrontendLobsterAgent;
+  message: string;
+  expGained: number;
+}> {
+  return interactWithLobster(agentId, 'rest');
 }

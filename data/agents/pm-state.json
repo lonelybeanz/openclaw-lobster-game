@@ -1,0 +1,52 @@
+{
+  "agentId": "pm",
+  "name": "产品虾-pm",
+  "role": "pm",
+  "personality": "social",
+  "emoji": "📊",
+  "color": "#FFE66D",
+  "status": {
+    "hp": 80,
+    "hunger": 30.686115555555553,
+    "mood": 70.85764444444447,
+    "energy": 60.857644444444446,
+    "fatigue": 19.656942222222227,
+    "growth": 0,
+    "level": 1
+  },
+  "stats": {
+    "intelligence": 20,
+    "coding": 10,
+    "planning": 30,
+    "stability": 10,
+    "creativity": 10,
+    "learning": 15,
+    "neurons": 0
+  },
+  "evolution": {
+    "stage": "larva",
+    "progress": 0
+  },
+  "timestamps": {
+    "created": "2026-03-31T08:50:04.022Z",
+    "lastUpdate": "2026-03-31T09:00:21.526Z",
+    "lastFed": "2026-03-31T08:50:04.022Z",
+    "lastTrained": "2026-03-31T08:50:04.022Z",
+    "lastRested": "2026-03-31T08:50:04.022Z",
+    "lastActive": "2026-03-31T08:50:04.022Z"
+  },
+  "openclaw": {
+    "totalTokens": 0,
+    "totalSessions": 0,
+    "memoryFiles": 0
+  },
+  "totals": {
+    "interactions": 0,
+    "tokensConsumed": 0,
+    "sessionsCompleted": 0
+  },
+  "currentAction": {
+    "action": "准备就绪",
+    "since": "2026-03-31T08:58:11.123Z"
+  }
+}

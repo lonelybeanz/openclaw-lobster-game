@@ -1,0 +1,52 @@
+{
+  "agentId": "dev",
+  "name": "开发虾-dev",
+  "role": "dev",
+  "personality": "diligent",
+  "emoji": "👨‍💻",
+  "color": "#4ECDC4",
+  "status": {
+    "hp": 80,
+    "hunger": 30.823337333333328,
+    "mood": 70.85764305555556,
+    "energy": 60.771878750000006,
+    "fatigue": 19.656942777777775,
+    "growth": 0,
+    "level": 1
+  },
+  "stats": {
+    "intelligence": 20,
+    "coding": 30,
+    "planning": 10,
+    "stability": 10,
+    "creativity": 10,
+    "learning": 15,
+    "neurons": 0
+  },
+  "evolution": {
+    "stage": "larva",
+    "progress": 0
+  },
+  "timestamps": {
+    "created": "2026-03-31T08:50:04.016Z",
+    "lastUpdate": "2026-03-31T09:00:21.519Z",
+    "lastFed": "2026-03-31T08:50:04.016Z",
+    "lastTrained": "2026-03-31T08:50:04.016Z",
+    "lastRested": "2026-03-31T08:50:04.016Z",
+    "lastActive": "2026-03-31T08:50:04.016Z"
+  },
+  "openclaw": {
+    "totalTokens": 0,
+    "totalSessions": 0,
+    "memoryFiles": 0
+  },
+  "totals": {
+    "interactions": 0,
+    "tokensConsumed": 0,
+    "sessionsCompleted": 0
+  },
+  "currentAction": {
+    "action": "准备就绪",
+    "since": "2026-03-31T08:58:11.115Z"
+  }
+}

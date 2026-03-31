@@ -300,6 +300,7 @@ export interface LobsterAgent {
     creativity: number;
     learning: number;
   };
+  fatigue: number;  // 疲劳度 0-100
   birthDate: string;
   age: number;
   evolutionStage: number;

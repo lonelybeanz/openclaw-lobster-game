@@ -848,6 +848,13 @@ export default function LobsterPage() {
                           </div>
                           <span style={{ width: '30px', textAlign: 'right' }}>{agent.status.energy}%</span>
                         </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
+                          <span style={{ width: '40px' }}>😴 疲劳</span>
+                          <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                            <div style={{ width: `${agent.fatigue}%`, height: '100%', background: '#6366f1', borderRadius: '2px' }} />
+                          </div>
+                          <span style={{ width: '30px', textAlign: 'right' }}>{agent.fatigue}%</span>
+                        </div>
                       </div>
                       
                       {/* 操作按钮 */}

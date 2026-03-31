@@ -1,0 +1,52 @@
+{
+  "agentId": "main",
+  "name": "主虾-main",
+  "role": "main",
+  "personality": "diligent",
+  "emoji": "🦞",
+  "color": "#FF6B6B",
+  "status": {
+    "hp": 85.1507725,
+    "hunger": 0.8233680000000005,
+    "mood": 85.85767500000001,
+    "energy": 45.77190749999998,
+    "fatigue": 39.65692999999999,
+    "growth": 50,
+    "level": 1
+  },
+  "stats": {
+    "intelligence": 20,
+    "coding": 10,
+    "planning": 10,
+    "stability": 10,
+    "creativity": 10,
+    "learning": 17,
+    "neurons": 0
+  },
+  "evolution": {
+    "stage": "larva",
+    "progress": 50
+  },
+  "timestamps": {
+    "created": "2026-03-31T08:50:03.998Z",
+    "lastUpdate": "2026-03-31T09:00:21.525Z",
+    "lastFed": "2026-03-31T08:50:22.339Z",
+    "lastTrained": "2026-03-31T08:59:25.121Z",
+    "lastRested": "2026-03-31T08:50:03.998Z",
+    "lastActive": "2026-03-31T08:50:03.998Z"
+  },
+  "openclaw": {
+    "totalTokens": 0,
+    "totalSessions": 0,
+    "memoryFiles": 0
+  },
+  "totals": {
+    "interactions": 2,
+    "tokensConsumed": 0,
+    "sessionsCompleted": 0
+  },
+  "currentAction": {
+    "action": "准备就绪",
+    "since": "2026-03-31T08:50:04.021Z"
+  }
+}
