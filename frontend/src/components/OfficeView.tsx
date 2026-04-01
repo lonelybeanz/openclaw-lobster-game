@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { LobsterAgent } from '../api';
+import { useWebSocket } from '../hooks/useWebSocket';
 
 // 任务类型图标
 const taskIcons: Record<string, string> = {
@@ -64,7 +65,7 @@ export function OfficeView({ agents }: OfficeViewProps) {
   const [officeAgents, setOfficeAgents] = useState<OfficeAgent[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<OfficeAgent | null>(null);
   const [realtimeStats, setRealtimeStats] = useState<any>(null);
-  const [isPolling, setIsPolling] = useState(true);
+  const [showSystemMessages, setShowSystemMessages] = useState(true);
 
   // 分配办公室位置
   const assignPositions = useCallback((agents: LobsterAgent[]): OfficeAgent[] => {
@@ -85,65 +86,48 @@ export function OfficeView({ agents }: OfficeViewProps) {
     }));
   }, []);
 
-  // 获取实时状态
-  const fetchRealtimeData = useCallback(async () => {
-    try {
-      const [agentsRes, statsRes] = await Promise.all([
-        fetch('http://localhost:13000/lobster/realtime/agents'),
-        fetch('http://localhost:13000/lobster/realtime/stats'),
-      ]);
+  // 使用 WebSocket 接收实时更新
+  const { status: wsStatus, agents: wsAgents, stats: wsStats, systemMessages } = useWebSocket({
+    onMessage: (message) => {
+      console.log('[OfficeView] Received:', message.type);
+    },
+    onConnect: () => {
+      console.log('[OfficeView] WebSocket connected');
+    },
+    onDisconnect: () => {
+      console.log('[OfficeView] WebSocket disconnected');
+    },
+  });
 
-      if (agentsRes.ok && statsRes.ok) {
-        const agentsData = await agentsRes.json();
-        const statsData = await statsRes.json();
-
-        if (agentsData.code === 0) {
-          const realtimeMap = new Map(
-            agentsData.data.map((s: AgentRealtimeState) => [s.agentId, s])
-          );
-
-          setOfficeAgents((prev: OfficeAgent[]) =>
-            prev.map((agent: OfficeAgent) => {
-              const rt = realtimeMap.get(agent.id) as AgentRealtimeState | undefined;
-              return {
-                ...agent,
-                realtime: rt,
-              };
-            })
-          );
-        }
-
-        if (statsData.code === 0) {
-          setRealtimeStats(statsData.data);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch realtime data:', error);
-    }
-  }, []);
-
-  // 初始化
+  // 初始化办公室布局
   useEffect(() => {
     setOfficeAgents(assignPositions(agents));
-    
-    // 启动实时监控
-    fetch('http://localhost:13000/lobster/realtime/start', { method: 'POST' })
-      .catch(console.error);
-
-    return () => {
-      fetch('http://localhost:13000/lobster/realtime/stop', { method: 'POST' })
-        .catch(console.error);
-    };
   }, [agents, assignPositions]);
 
-  // 轮询实时数据
+  // 同步 WebSocket 数据到本地状态
   useEffect(() => {
-    if (!isPolling) return;
+    if (wsAgents.length > 0) {
+      setOfficeAgents(prev =>
+        prev.map(agent => {
+          const wsAgent = wsAgents.find((a: any) => a.agentId === agent.id);
+          if (wsAgent) {
+            return {
+              ...agent,
+              realtime: wsAgent as AgentRealtimeState,
+            };
+          }
+          return agent;
+        })
+      );
+    }
+  }, [wsAgents]);
 
-    fetchRealtimeData();
-    const interval = setInterval(fetchRealtimeData, 3000);
-    return () => clearInterval(interval);
-  }, [isPolling, fetchRealtimeData]);
+  // 同步统计数据
+  useEffect(() => {
+    if (wsStats) {
+      setRealtimeStats(wsStats);
+    }
+  }, [wsStats]);
 
   const getStatusColor = (status?: string) => {
     switch (status) {
@@ -248,13 +232,30 @@ export function OfficeView({ agents }: OfficeViewProps) {
         <div className="stat-item">
           <span>🤝 协作次数: {realtimeStats?.collaborations || 0}</span>
         </div>
-        <button 
-          className="poll-toggle"
-          onClick={() => setIsPolling(!isPolling)}
-        >
-          {isPolling ? '⏸️ 暂停' : '▶️ 继续'}
-        </button>
+        <div className={`ws-status ${wsStatus}`}>
+          {wsStatus === 'connected' ? '🟢 实时' : 
+           wsStatus === 'reconnecting' ? '🟡 重连' : 
+           wsStatus === 'connecting' ? '🔵 连接' : '🔴 离线'}
+        </div>
       </div>
+
+      {/* 系统消息面板 */}
+      {showSystemMessages && systemMessages.length > 0 && (
+        <div className="system-messages">
+          <div className="messages-header">
+            <span>📢 系统消息</span>
+            <button onClick={() => setShowSystemMessages(false)}>×</button>
+          </div>
+          <div className="messages-list">
+            {systemMessages.slice(-3).map((msg, i) => (
+              <div key={i} className={`message-item ${msg.level}`}>
+                <span className="message-time">{msg.time.toLocaleTimeString()}</span>
+                <span className="message-content">{msg.message}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 选中 Agent 详情弹窗 */}
       {selectedAgent && (
@@ -415,18 +416,95 @@ export function OfficeView({ agents }: OfficeViewProps) {
           color: rgba(255,255,255,0.8);
         }
 
-        .poll-toggle {
-          padding: 6px 12px;
-          background: rgba(255,255,255,0.1);
-          border: none;
-          border-radius: 6px;
-          color: white;
-          cursor: pointer;
-          font-size: 12px;
+        .ws-status {
+          padding: 4px 10px;
+          border-radius: 12px;
+          font-size: 11px;
+          font-weight: 500;
         }
 
-        .poll-toggle:hover {
-          background: rgba(255,255,255,0.2);
+        .ws-status.connected {
+          background: rgba(34, 197, 94, 0.2);
+          color: #22c55e;
+        }
+
+        .ws-status.reconnecting {
+          background: rgba(245, 158, 11, 0.2);
+          color: #f59e0b;
+          animation: blink 1s infinite;
+        }
+
+        .ws-status.connecting {
+          background: rgba(59, 130, 246, 0.2);
+          color: #3b82f6;
+        }
+
+        .ws-status.disconnected {
+          background: rgba(239, 68, 68, 0.2);
+          color: #ef4444;
+        }
+
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+
+        .system-messages {
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          width: 280px;
+          background: rgba(0,0,0,0.8);
+          border-radius: 8px;
+          overflow: hidden;
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .messages-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 8px 12px;
+          background: rgba(255,255,255,0.05);
+          font-size: 12px;
+          color: rgba(255,255,255,0.8);
+        }
+
+        .messages-header button {
+          background: none;
+          border: none;
+          color: rgba(255,255,255,0.5);
+          cursor: pointer;
+          font-size: 16px;
+        }
+
+        .messages-list {
+          max-height: 150px;
+          overflow-y: auto;
+        }
+
+        .message-item {
+          padding: 8px 12px;
+          border-bottom: 1px solid rgba(255,255,255,0.05);
+          font-size: 11px;
+        }
+
+        .message-item:last-child {
+          border-bottom: none;
+        }
+
+        .message-item.info { border-left: 3px solid #3b82f6; }
+        .message-item.warning { border-left: 3px solid #f59e0b; }
+        .message-item.error { border-left: 3px solid #ef4444; }
+
+        .message-time {
+          color: rgba(255,255,255,0.4);
+          margin-right: 8px;
+        }
+
+        .message-content {
+          color: rgba(255,255,255,0.8);
         }
 
         .animate-pulse {
