@@ -50,6 +50,11 @@ export interface FrontendLobsterAgent {
     creativity: number;
     learning: number;
   };
+  fatigue: number;
+  evolution: {
+    stage: EvolutionStage;
+    progress: number;
+  };
   birthDate: string;
   age: number;
   evolutionStage: number;
@@ -100,6 +105,7 @@ function toFrontendFormat(state: AgentLobsterState): FrontendLobsterAgent {
       learning: state.stats.learning,
     },
     fatigue: Math.round(state.status.fatigue),
+    evolution: state.evolution,
     birthDate: state.timestamps.created,
     age: daysSince(state.timestamps.created),
     evolutionStage: stageNumber[state.evolution.stage],
@@ -401,8 +407,8 @@ export async function getLobsterStats(): Promise<{
   for (const agent of agents) {
     evolutionDistribution[agent.evolution.stage]++;
     roleDistribution[agent.role]++;
-    totalTokens += agent.openclaw.totalTokens;
-    totalSessions += agent.openclaw.totalSessions;
+    totalTokens += agent.totalTokens;
+    totalSessions += agent.totalSessions;
   }
   
   return {

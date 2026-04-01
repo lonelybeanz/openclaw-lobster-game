@@ -177,7 +177,7 @@ async function readOpenClawData(agentId: string): Promise<{
   let lastSessionId: string | undefined;
 
   try {
-    // 读取 sessions.json
+    // 读取 sessions.json (新格式)
     const sessionsPath = join(OPENCLAW_DIR, 'agents', agentId, 'sessions', 'sessions.json');
     if (existsSync(sessionsPath)) {
       const content = await readFile(sessionsPath, 'utf-8');
@@ -190,6 +190,43 @@ async function readOpenClawData(agentId: string): Promise<{
           const lastSession = sessionData[sessions - 1];
           lastActive = lastSession.createdAt || lastActive;
           lastSessionId = lastSession.id;
+        }
+      }
+    }
+
+    // 读取 .jsonl 文件 (旧格式/实际格式)
+    // 每个 .jsonl 文件代表一个 session
+    const sessionsDir = join(OPENCLAW_DIR, 'agents', agentId, 'sessions');
+    if (existsSync(sessionsDir)) {
+      const files = await readdir(sessionsDir);
+      const jsonlFiles = files.filter(f => f.endsWith('.jsonl') && !f.includes('.deleted') && !f.includes('.reset'));
+      
+      sessions += jsonlFiles.length;
+      
+      for (const file of jsonlFiles) {
+        try {
+          const filePath = join(sessionsDir, file);
+          const stats = await import('fs/promises').then(m => m.stat(filePath));
+          // 估算 tokens: 假设平均每 4 字符 = 1 token
+          tokens += Math.floor(stats.size / 4);
+          
+          // 读取第一行获取时间戳
+          const content = await readFile(filePath, 'utf-8');
+          const firstLine = content.split('\n')[0];
+          if (firstLine) {
+            try {
+              const record = JSON.parse(firstLine);
+              const recordTime = record.timestamp || record.createdAt;
+              if (recordTime && new Date(recordTime) > new Date(lastActive)) {
+                lastActive = recordTime;
+                lastSessionId = record.id || record.sessionId || file.replace('.jsonl', '');
+              }
+            } catch {
+              // 忽略解析错误
+            }
+          }
+        } catch {
+          // 忽略读取错误的文件
         }
       }
     }

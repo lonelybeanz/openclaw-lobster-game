@@ -6,47 +6,47 @@
   "emoji": "👨‍💻",
   "color": "#4ECDC4",
   "status": {
-    "hp": 80,
-    "hunger": 30.823337333333328,
-    "mood": 70.85764305555556,
-    "energy": 60.771878750000006,
-    "fatigue": 19.656942777777775,
-    "growth": 0,
-    "level": 1
+    "hp": 79.62570166666666,
+    "hunger": 30.898316,
+    "mood": 100,
+    "energy": 0.84217125,
+    "fatigue": 99.62570166666666,
+    "growth": 1154.754,
+    "level": 12
   },
   "stats": {
-    "intelligence": 20,
-    "coding": 30,
-    "planning": 10,
-    "stability": 10,
-    "creativity": 10,
-    "learning": 15,
-    "neurons": 0
+    "intelligence": 70,
+    "coding": 80,
+    "planning": 50,
+    "stability": 50,
+    "creativity": 50,
+    "learning": 65,
+    "neurons": 5
   },
   "evolution": {
-    "stage": "larva",
-    "progress": 0
+    "stage": "adult",
+    "progress": 43.65026666666666
   },
   "timestamps": {
-    "created": "2026-03-31T08:50:04.016Z",
-    "lastUpdate": "2026-03-31T09:00:21.519Z",
-    "lastFed": "2026-03-31T08:50:04.016Z",
-    "lastTrained": "2026-03-31T08:50:04.016Z",
-    "lastRested": "2026-03-31T08:50:04.016Z",
-    "lastActive": "2026-03-31T08:50:04.016Z"
+    "created": "2026-04-01T04:36:26.397Z",
+    "lastUpdate": "2026-04-01T04:47:40.134Z",
+    "lastFed": "2026-04-01T04:36:26.397Z",
+    "lastTrained": "2026-04-01T04:36:26.397Z",
+    "lastRested": "2026-04-01T04:36:26.397Z",
+    "lastActive": "2026-04-01T04:36:26.397Z"
   },
   "openclaw": {
-    "totalTokens": 0,
-    "totalSessions": 0,
+    "totalTokens": 564754,
+    "totalSessions": 59,
     "memoryFiles": 0
   },
   "totals": {
     "interactions": 0,
-    "tokensConsumed": 0,
-    "sessionsCompleted": 0
+    "tokensConsumed": 564754,
+    "sessionsCompleted": 59
   },
   "currentAction": {
-    "action": "准备就绪",
-    "since": "2026-03-31T08:58:11.115Z"
+    "action": "Debug",
+    "since": "2026-04-01T04:36:26.397Z"
   }
 }
