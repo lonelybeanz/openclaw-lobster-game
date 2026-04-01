@@ -756,4 +756,96 @@ app.post('/lobster/caretaker/action', async (c) => {
   }
 });
 
+// ============================================
+// 实时监控 API (Realtime Monitor)
+// ============================================
+
+/** 获取所有 agent 实时状态 */
+app.get('/lobster/realtime/agents', async (c) => {
+  try {
+    const { realtimeMonitor } = await import('./services/realtimeMonitor');
+    const states = realtimeMonitor.getAllAgentStates();
+    return c.json({ code: 0, data: states });
+  } catch (error) {
+    console.error('[realtime/agents] error:', error);
+    return c.json({ code: 1, message: '获取实时状态失败' }, 500);
+  }
+});
+
+/** 获取单个 agent 实时状态 */
+app.get('/lobster/realtime/agents/:id', async (c) => {
+  try {
+    const agentId = c.req.param('id');
+    const { realtimeMonitor } = await import('./services/realtimeMonitor');
+    const state = realtimeMonitor.getAgentState(agentId);
+    if (!state) {
+      return c.json({ code: 1, message: 'Agent 不存在' }, 404);
+    }
+    return c.json({ code: 0, data: state });
+  } catch (error) {
+    console.error('[realtime/agent] error:', error);
+    return c.json({ code: 1, message: '获取实时状态失败' }, 500);
+  }
+});
+
+/** 获取活跃任务 */
+app.get('/lobster/realtime/tasks', async (c) => {
+  try {
+    const { realtimeMonitor } = await import('./services/realtimeMonitor');
+    const tasks = realtimeMonitor.getActiveTasks();
+    return c.json({ code: 0, data: tasks });
+  } catch (error) {
+    console.error('[realtime/tasks] error:', error);
+    return c.json({ code: 1, message: '获取活跃任务失败' }, 500);
+  }
+});
+
+/** 获取今日统计 */
+app.get('/lobster/realtime/stats', async (c) => {
+  try {
+    const { realtimeMonitor } = await import('./services/realtimeMonitor');
+    const stats = realtimeMonitor.getTodayStats();
+    return c.json({ code: 0, data: stats });
+  } catch (error) {
+    console.error('[realtime/stats] error:', error);
+    return c.json({ code: 1, message: '获取统计数据失败' }, 500);
+  }
+});
+
+/** 获取协作历史 */
+app.get('/lobster/realtime/collaborations', async (c) => {
+  try {
+    const { realtimeMonitor } = await import('./services/realtimeMonitor');
+    const history = realtimeMonitor.getCollaborationHistory();
+    return c.json({ code: 0, data: history });
+  } catch (error) {
+    console.error('[realtime/collaborations] error:', error);
+    return c.json({ code: 1, message: '获取协作历史失败' }, 500);
+  }
+});
+
+/** 启动实时监控 */
+app.post('/lobster/realtime/start', async (c) => {
+  try {
+    const { realtimeMonitor } = await import('./services/realtimeMonitor');
+    await realtimeMonitor.start();
+    return c.json({ code: 0, data: { success: true, message: '实时监控已启动' } });
+  } catch (error) {
+    console.error('[realtime/start] error:', error);
+    return c.json({ code: 1, message: '启动实时监控失败' }, 500);
+  }
+});
+
+/** 停止实时监控 */
+app.post('/lobster/realtime/stop', async (c) => {
+  try {
+    const { realtimeMonitor } = await import('./services/realtimeMonitor');
+    realtimeMonitor.stop();
+    return c.json({ code: 0, data: { success: true, message: '实时监控已停止' } });
+  } catch (error) {
+    console.error('[realtime/stop] error:', error);
+    return c.json({ code: 1, message: '停止实时监控失败' }, 500);
+  }
+});
+
 export default app;

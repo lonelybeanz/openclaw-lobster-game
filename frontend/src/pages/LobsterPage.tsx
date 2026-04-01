@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { OfficeView } from '../components/OfficeView';
 import {
   RequestTimeoutError,
   deepTalk,
@@ -191,7 +192,7 @@ export default function LobsterPage() {
   const [delta, setDelta] = useState<DeltaState>(initialDelta);
   const [lastAction, setLastAction] = useState<string>('等待互动');
   const [expandedNewsId, setExpandedNewsId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'status' | 'evolution' | 'memory' | 'news' | 'dashboard'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'status' | 'office' | 'evolution' | 'memory' | 'news'>('dashboard');
   const [newsSubTab, setNewsSubTab] = useState<'github' | 'search'>('github');
   const [timelinePeriod, setTimelinePeriod] = useState<'7d' | '30d' | '90d'>('7d');
   const [showFormulaGuide, setShowFormulaGuide] = useState(false);
@@ -905,6 +906,12 @@ export default function LobsterPage() {
                 error={visualizationError}
               />
             </div>
+          </section>
+
+          {/* 办公室视图 */}
+          <section className="tab-content" data-tab="office" style={{ display: activeTab === 'office' ? 'block' : 'none' }}>
+            <h3 style={{ margin: '0 0 12px 0' }}>🏢 OpenClaw 龙虾公司 - 实时监控</h3>
+            <OfficeView agents={lobsterAgents} />
           </section>
 
           <section className="fade-in-up delay-3 tab-content" data-tab="evolution" style={{ display: activeTab === 'evolution' ? 'block' : 'none' }}>
