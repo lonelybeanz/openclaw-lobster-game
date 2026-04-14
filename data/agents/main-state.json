@@ -7,46 +7,46 @@
   "color": "#FF6B6B",
   "status": {
     "hp": 85,
-    "hunger": 2.4903026666666634,
-    "mood": 100,
-    "energy": 22.334658750000003,
-    "fatigue": 82.96237388888889,
-    "growth": 456.79,
+    "hunger": 44.16586533333336,
+    "mood": 95.19292244444443,
+    "energy": 100,
+    "fatigue": 65.59755611111109,
+    "growth": 460.1,
     "level": 5
   },
   "stats": {
-    "intelligence": 65,
-    "coding": 45,
-    "planning": 45,
-    "stability": 45,
-    "creativity": 45,
-    "learning": 60,
+    "intelligence": 66,
+    "coding": 46,
+    "planning": 46,
+    "stability": 46,
+    "creativity": 46,
+    "learning": 61,
     "neurons": 0
   },
   "evolution": {
     "stage": "juvenile",
-    "progress": 89.1975
+    "progress": 90.025
   },
   "timestamps": {
     "created": "2026-04-01T04:36:26.441Z",
-    "lastUpdate": "2026-04-01T05:07:34.170Z",
+    "lastUpdate": "2026-04-01T13:48:30.842Z",
     "lastFed": "2026-04-01T04:47:40.214Z",
     "lastTrained": "2026-04-01T04:36:26.441Z",
     "lastRested": "2026-04-01T04:36:26.441Z",
-    "lastActive": "2026-04-01T04:36:26.441Z"
+    "lastActive": "2026-04-01T13:11:22.782Z"
   },
   "openclaw": {
-    "totalTokens": 376790,
+    "totalTokens": 380100,
     "totalSessions": 8,
     "memoryFiles": 0
   },
   "totals": {
     "interactions": 1,
-    "tokensConsumed": 376790,
+    "tokensConsumed": 380100,
     "sessionsCompleted": 8
   },
   "currentAction": {
-    "action": "统筹规划",
-    "since": "2026-04-01T04:36:26.441Z"
+    "action": "优化性能",
+    "since": "2026-04-01T13:11:22.782Z"
   }
 }

@@ -6,11 +6,11 @@
   "emoji": "🦐",
   "color": "#FFD93D",
   "status": {
-    "hp": 80,
-    "hunger": 32.07525555555556,
-    "mood": 72.59406944444444,
-    "energy": 62.594069444444436,
-    "fatigue": 18.96237222222222,
+    "hp": 85,
+    "hunger": 36.80488888888888,
+    "mood": 66.96573444444442,
+    "energy": 100,
+    "fatigue": 1.5975555555555525,
     "growth": 0,
     "level": 1
   },
@@ -29,8 +29,8 @@
   },
   "timestamps": {
     "created": "2026-04-01T04:36:26.440Z",
-    "lastUpdate": "2026-04-01T05:07:34.170Z",
-    "lastFed": "2026-04-01T04:36:26.440Z",
+    "lastUpdate": "2026-04-01T13:48:30.841Z",
+    "lastFed": "2026-04-01T13:12:30.722Z",
     "lastTrained": "2026-04-01T04:36:26.440Z",
     "lastRested": "2026-04-01T04:36:26.440Z",
     "lastActive": "2026-04-01T04:36:26.440Z"
@@ -41,7 +41,7 @@
     "memoryFiles": 0
   },
   "totals": {
-    "interactions": 0,
+    "interactions": 1,
     "tokensConsumed": 0,
     "sessionsCompleted": 0
   },

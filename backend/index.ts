@@ -1,36 +1,40 @@
+import type { Server, ServerWebSocket } from 'bun';
 import app from './src/app';
+import { dialogueTracker } from './src/services/dialogueTracker';
 import { realtimeMonitor } from './src/services/realtimeMonitor';
 import { wsManager } from './src/services/websocket';
 
-// 启动实时监控
 realtimeMonitor.start().then(() => {
   console.log('[Server] Realtime monitor started');
 });
 
-// 初始化 WebSocket 管理器
+dialogueTracker.start().then(() => {
+  console.log('[Server] Dialogue tracker started');
+});
+
 wsManager.initialize();
 
-// WebSocket 处理器
+type WsData = Record<string, never>;
+
 const websocketHandler = {
-  message(ws, message) {
+  message(ws: ServerWebSocket<WsData>, message: string | Buffer) {
     const msg = typeof message === 'string' ? message : message.toString();
-    wsManager.handleMessage(ws, msg);
+    wsManager.handleMessage(ws as any, msg);
   },
-  open(ws) {
-    wsManager.handleConnection(ws);
+  open(ws: ServerWebSocket<WsData>) {
+    wsManager.handleConnection(ws as any);
   },
-  close(ws) {
-    wsManager.handleDisconnect(ws);
+  close(ws: ServerWebSocket<WsData>) {
+    wsManager.handleDisconnect(ws as any);
   },
-  drain(ws) {
+  drain(_ws: ServerWebSocket<WsData>) {
     // 处理背压
   },
 };
 
 export default {
   port: 13000,
-  fetch(req, server) {
-    // 处理 WebSocket 升级请求
+  fetch(req: Request, server: Server<WsData>) {
     const url = new URL(req.url);
     if (url.pathname === '/ws') {
       const success = server.upgrade(req, { data: {} });
@@ -38,8 +42,7 @@ export default {
         return undefined;
       }
     }
-    
-    // 否则使用 Hono 处理
+
     return app.fetch(req, server);
   },
   websocket: websocketHandler,

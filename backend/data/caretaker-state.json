@@ -2,7 +2,7 @@
   "name": "养殖师",
   "level": "novice",
   "levelNumber": 3,
-  "experience": 280,
+  "experience": 297,
   "maxExperience": 400,
   "skills": {
     "feeding": 10,
@@ -12,17 +12,31 @@
     "evolving": 5
   },
   "stats": {
-    "totalActions": 28,
+    "totalActions": 30,
     "feedCount": 0,
     "trainCount": 0,
     "restCount": 0,
-    "cleanCount": 20,
-    "observeCount": 8,
+    "cleanCount": 21,
+    "observeCount": 9,
     "evolveCount": 0,
     "streakDays": 0,
-    "lastActiveDate": "2026-03-28"
+    "lastActiveDate": "2026-04-01"
   },
   "recentActions": [
+    {
+      "id": "action-1775049155815",
+      "timestamp": "2026-04-01T13:12:35.815Z",
+      "type": "clean",
+      "details": "更换了新鲜的水质",
+      "expGained": 12
+    },
+    {
+      "id": "action-1775049154577",
+      "timestamp": "2026-04-01T13:12:34.577Z",
+      "type": "observe",
+      "details": "记录了成长数据",
+      "expGained": 5
+    },
     {
       "id": "action-1774666526955",
       "timestamp": "2026-03-28T02:55:26.955Z",

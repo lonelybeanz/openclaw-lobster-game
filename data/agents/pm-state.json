@@ -6,47 +6,47 @@
   "emoji": "📊",
   "color": "#FFE66D",
   "status": {
-    "hp": 78.96237277777779,
-    "hunger": 32.07525444444445,
+    "hp": 83.96237277777779,
+    "hunger": 36.80491666666666,
     "mood": 100,
-    "energy": 17.59406805555556,
-    "fatigue": 90.96237277777779,
-    "growth": 429.483,
+    "energy": 100,
+    "fatigue": 73.59754166666667,
+    "growth": 435.21500000000003,
     "level": 5
   },
   "stats": {
-    "intelligence": 62,
-    "coding": 42,
-    "planning": 72,
-    "stability": 42,
-    "creativity": 42,
-    "learning": 57,
+    "intelligence": 63,
+    "coding": 43,
+    "planning": 73,
+    "stability": 43,
+    "creativity": 43,
+    "learning": 58,
     "neurons": 0
   },
   "evolution": {
     "stage": "juvenile",
-    "progress": 82.37075
+    "progress": 83.80375000000001
   },
   "timestamps": {
     "created": "2026-04-01T04:36:26.451Z",
-    "lastUpdate": "2026-04-01T05:07:34.180Z",
-    "lastFed": "2026-04-01T04:36:26.451Z",
+    "lastUpdate": "2026-04-01T13:48:30.882Z",
+    "lastFed": "2026-04-01T13:12:30.258Z",
     "lastTrained": "2026-04-01T04:36:26.451Z",
     "lastRested": "2026-04-01T04:36:26.451Z",
-    "lastActive": "2026-04-01T04:36:26.451Z"
+    "lastActive": "2026-04-01T13:11:22.800Z"
   },
   "openclaw": {
-    "totalTokens": 339483,
+    "totalTokens": 345215,
     "totalSessions": 9,
     "memoryFiles": 0
   },
   "totals": {
-    "interactions": 0,
-    "tokensConsumed": 339483,
+    "interactions": 1,
+    "tokensConsumed": 345215,
     "sessionsCompleted": 9
   },
   "currentAction": {
-    "action": "写PRD",
-    "since": "2026-04-01T04:36:26.451Z"
+    "action": "需求评审",
+    "since": "2026-04-01T13:11:22.800Z"
   }
 }

@@ -42,6 +42,7 @@ import {
   getCaretakerSummary,
   consumeResource,
 } from './services/caretaker';
+import { dialogueTracker } from './services/dialogueTracker';
 
 const app = new Hono();
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -753,6 +754,79 @@ app.post('/lobster/caretaker/action', async (c) => {
   } catch (error) {
     console.error('[caretaker/action] error:', error);
     return c.json({ code: 1, message: '记录行为失败' }, 500);
+  }
+});
+
+// ============================================
+// 对话引擎 API (Dialogue Engine)
+// ============================================
+
+/** 获取对话会话摘要 */
+app.get('/lobster/dialogue/sessions', async (c) => {
+  try {
+    const data = dialogueTracker.getAllSessions();
+    return c.json({ code: 0, data });
+  } catch (error) {
+    console.error('[dialogue/sessions] error:', error);
+    return c.json({ code: 1, message: '获取对话会话失败' }, 500);
+  }
+});
+
+/** 获取单个 agent 最近对话 */
+app.get('/lobster/dialogue/agents/:id', async (c) => {
+  try {
+    const agentId = c.req.param('id');
+    const limit = Math.max(1, Math.min(100, Number.parseInt(c.req.query('limit') || '20', 10) || 20));
+    const data = dialogueTracker.getAgentDialogue(agentId, limit);
+    return c.json({ code: 0, data });
+  } catch (error) {
+    console.error('[dialogue/agent] error:', error);
+    return c.json({ code: 1, message: '获取对话失败' }, 500);
+  }
+});
+
+/** 获取对话统计 */
+app.get('/lobster/dialogue/stats', async (c) => {
+  try {
+    const data = dialogueTracker.getStats();
+    return c.json({ code: 0, data });
+  } catch (error) {
+    console.error('[dialogue/stats] error:', error);
+    return c.json({ code: 1, message: '获取对话统计失败' }, 500);
+  }
+});
+
+/** 获取最近活动 */
+app.get('/lobster/dialogue/recent', async (c) => {
+  try {
+    const minutes = Math.max(1, Math.min(180, Number.parseInt(c.req.query('minutes') || '10', 10) || 10));
+    const data = dialogueTracker.getRecentActivity(minutes);
+    return c.json({ code: 0, data });
+  } catch (error) {
+    console.error('[dialogue/recent] error:', error);
+    return c.json({ code: 1, message: '获取最近活动失败' }, 500);
+  }
+});
+
+/** 启动对话跟踪 */
+app.post('/lobster/dialogue/start', async (c) => {
+  try {
+    await dialogueTracker.start();
+    return c.json({ code: 0, data: { success: true, message: '对话跟踪已启动' } });
+  } catch (error) {
+    console.error('[dialogue/start] error:', error);
+    return c.json({ code: 1, message: '启动对话跟踪失败' }, 500);
+  }
+});
+
+/** 停止对话跟踪 */
+app.post('/lobster/dialogue/stop', async (c) => {
+  try {
+    dialogueTracker.stop();
+    return c.json({ code: 0, data: { success: true, message: '对话跟踪已停止' } });
+  } catch (error) {
+    console.error('[dialogue/stop] error:', error);
+    return c.json({ code: 1, message: '停止对话跟踪失败' }, 500);
   }
 });
 
